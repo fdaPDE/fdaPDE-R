@@ -1,0 +1,11 @@
+useDynLib(fdaPDE, .registration=TRUE)
+import(methods, Rcpp)
+import(RcppEigen)
+importFrom(Rcpp, evalCpp)
+exportPattern("^[^\\.]")
+
+## import differential operator overloads
+S3method("*", fe_grad)
+S3method("+", diff_op)
+S3method("*", diff_op)
+S3method("*", fe_function)
