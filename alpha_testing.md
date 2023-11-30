@@ -40,7 +40,7 @@ Lo scopo di questa prima fase di testing è quella di verificare la stabilità d
 
 ## Testing
 
-Una volta che avete testato una funzionalità, vi chiedo di scrivere uno script di test ben isolato (MWE: Minimal Working Example) che riporta la generazione dei dati, così come il test sul modello vero e proprio. Il test non deve contenere nessun plot o output su console. 
+Una volta che avete testato una funzionalità, vi chiedo di scrivere uno script di test ben isolato (MWE: Minimal Working Example) che riporta la generazione dei dati, così come il test sul modello vero e proprio. Il test non deve contenere nessun plot o output su console. Potete caricare gli script di test sul branch `develop` in [fdaPDE-R](https://github.com/fdaPDE/fdaPDE-R).
 
 > Sarebbe l'ideale accettare una certa funzionalità come funzionante se è dichiarata tale da almeno 2 persone.
 
@@ -51,8 +51,8 @@ Lo scopo primario è quello di generare un equivalente test C++, che fossilizza 
 
 ## Bug reports
 
-Se incontrate un bug/crash, notificatemelo. Vi chiedo di 
-* spiegare con due parole cosa succede (crash / problema numerico / etc.) 
+Se incontrate un bug/crash, notificatemelo. L'ideale sarebbe riportarlo direttamente nella [dashboard](https://github.com/orgs/fdaPDE/projects/2/views/1). Vi chiedo di 
+* spiegare con due parole cosa succede (crash / problema numerico / etc. selezionate un opzione della colonna severity) 
 * è **fondamentale** che voi mi diate uno script R minimale che genera il problema. In generale, non posso fixare un bug se non riesco a riprodurlo.
 
 ## Interfaccia
