@@ -25,6 +25,32 @@ Questa pagina sarà inoltre aggiornata periodicamente per tutta la fase di testi
 
 * 30/11/23: inizio della fase di alpha-testing. Prima versione usabile dell'interfaccia `R`.
 
+## Installazione
+
+Dipendenze richieste
+* C++17
+* `Rcpp` e `RcppEigen`
+
+Le seguenti installano la nuova versione di fdaPDE sotto il nome `fdaPDE2`
+1. tramite il pacchetto `devtools`. Esegui da console R
+
+      ```
+	  devtools::install_github("fdaPDE/fdaPDE-R", ref="stable") 
+	  ```
+
+2. clonando la repository `fdaPDE-R`. Esegui da un terminale
+
+      ``` 
+	  git clone --recurse-submodules -b stable git@github.com:fdaPDE/fdaPDE-R.git 
+      cd path/to/fdaPDE-R
+	  ```
+
+	e installa il pacchetto dalla console di R con
+
+	``` 
+	  install.packages(".", type="source", repos=NULL) 
+	  ```
+
 ## Obbiettivo
 Lo scopo di questa prima fase di testing è quella di verificare la stabilità della libreria, di suggerire eventuali migliorie, e di arricchire la suite di testing (sia lato R, ma soprattutto C++).
 * *correttezza*: questo è il momento per fare check intesivi di correttezza numerica. Rispetto alla versione `fdaPDE-CRAN`, le differenze in norma $L^\infty$ possono essere nell'ordine di 10-7 (quindi non aspettatevi differenze zero macchina). Differenze più alte, possono esserci, e possono essere dovute a
