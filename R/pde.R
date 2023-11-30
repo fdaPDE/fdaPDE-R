@@ -1,277 +1,148 @@
-# Pde Class wraps C++ R_PDE class
+## This file is part of fdaPDE, a C++ library for physics-informed
+## spatial and functional data analysis.
+
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+pde_type_list <- list("laplacian" = 1, "elliptic" = 2, "parabolic" = 3)
+
+## utility R wrapper around C++ PDE concept
 .PdeCtr <- setRefClass(
-  Class = "PdeObject",
-  fields = c(
-   # L  = "ANY",                         # DiffOpObject
-    is_dirichletBC_set = "logical",      
-    times =       "vector",              # vector of time instants (parabolic problem only)
-    is_initialCondition_set = "logical", # initial condition       (parabolic problem only)
-    pde_ = "ANY" ,                       # Wraps of C++ class
-    is_parabolic = "logical",
-    is_init = "logical"                  
-  ),
-  methods = c(
-    solve = function(){
-      if(!is_dirichletBC_set){
-        warning("dirichletBC not setted. Assuming homogeneus boudary condition.")
-        if(!is_parabolic){
-          dirichletBC_ = as.matrix(rep(0,times=nrow(pde_$get_dofs_coordinates())))
-        }else 
-          dirichletBC_ = matrix(0, nrow=nrow(pde_$get_dofs_coordinates()), ncol=length(times))
-      pde_$set_dirichlet_bc(dirichletBC_)
-      is_dirichletBC_set <<- TRUE
-      }
-      if(is_parabolic & (!is_initialCondition_set)){
-        stop("initialCondition must be provided.")
-      }
-      if(!is_init) pde_$init()
-      pde_$solve()
-    },
-    solution = function(){
-      pde_$solution()
-    },
-    get_dofs_coordinates = function(){
-      pde_$get_dofs_coordinates()
-    },
-    set_dirichletBC = function(dirichletBC){
-      if(!is_parabolic){
-        dirichletBC_ <- as.matrix(dirichletBC(pde_$get_dofs_coordinates()))
-      }else{
-        
-        dirichletBC_ <- dirichletBC(pde_$get_dofs_coordinates(),times)
-        pde_$set_dirichlet_bc(dirichletBC_)
-      }
-      is_dirichletBC_set <<- TRUE
-      pde_$set_dirichlet_bc(dirichletBC_)
-    },
-    set_initialCondition = function(initialCondtion){
-      if(!is_parabolic)
-        stop("Cannot set initial condition for elliptic problem.")
-      is_initialCondition_set <<- TRUE
-      pde_$set_initial_condition(initialCondition(pde_$get_dofs_coordinates()))
-    },
-    get_mass = function(){
-      pde_$get_mass()
-    },
-    get_stiff = function(){
-      pde_$get_stiff()
-    }
-  )
+    Class = "PdeObject",
+    fields = c(
+        domain = "MeshObject",  ## vector of time instants (parabolic problem only)
+        pde_type = "number",    ## pde type tag (one in pde_type_list)
+        cpp_pde_handler = "ANY"
+    ),
+    methods = c(
+        dofs_coordinates = function() { pde$get_dofs_coordinates() },
+        set_dirichlet_bc = function(dirichlet_bc) {
+            if (!is_space_time(domain)) {
+                dirichlet_bc_ <- as.matrix(dirichlet_bc(pde$get_dofs_coordinates()))
+            } else {
+                dirichlet_bc_ <- as.matrix(dirichlet_bc(pde$get_dofs_coordinates(), domain$time_mesh))
+            }
+            pde$set_dirichlet_bc(dirichlet_bc_)
+        },
+        set_initial_condition = function(initial_condtion) {
+            if (pde_type != pde_type_list$parabolic || !is_space_time(domain)) {
+                stop("set_initial_condition is for space-time penalties only.")
+            }
+            pde$set_initial_condition(initial_condition(pde$get_dofs_coordinates()))
+        },
+        mass  = function() { pde$mass()  }, ## discretized mass matrix
+        stiff = function() { pde$stiff() }, ## discretization of differential operator
+        force = function() { pde$force() }, ## discretized forcing
+        get_pde = function() { pde }
+    )
 )
 
+## infers the type of a pde
+extract_pde_type <- function(L) {
+    if ("time" %in% names(L$params)) {
+        return(pde_type_list$parabolic)
+    }
+    if ("diffusion" %in% names(L$params) && !is.matrix(L$params$diffusion)) {
+        return(pde_type_list$laplacian)
+    }
+    return(pde_type_list$elliptic)
+}
 
-setGeneric("Pde", function(L,u,dirichletBC, initialCondition) standardGeneric("Pde"))
-setMethod("Pde", signature=c(L="DiffOpObject", u="ANY", dirichletBC="ANY", 
-                             initialCondition="missing"),
-          function(L,u,dirichletBC){
-            D = L$f$FunctionSpace$mesh$data ## C++ R_Mesh class
-            
-            is_parabolic = FALSE
-            if( length(L$f$FunctionSpace$mesh$times) != 0 ) is_parabolic = TRUE
-            times <- L$f$FunctionSpace$mesh$times
-            
-            ## set pde type
-            pde_type <- 0
-            pde_parameters <- NULL
-            if ("diffusion" %in% names(L$params) & !is.matrix(L$params$diffusion)){
-              ## specialized implementation for laplace operator
-              pde_type <- 1L 
-              
-              pde_parameters$diffusion <- 0.0
-              
-            } else {
-              ## general diffusion-transport-reaction problem, constant coefficients
-              pde_type <- 2L
-              
-              pde_parameters$diffusion <- matrix(0, nrow = 2, ncol = 2)
-              
-            }
-            
-            ## prepare pde_parameters list
-            pde_parameters$transport <- matrix(0, nrow = 2, ncol = 1)
-            pde_parameters$reaction  <- 0.0
-            pde_parameters$time <- 0L
-            for(i in 1:length(L$tokens)) {
-              pde_parameters[[paste(L$tokens[i])]] <- L$params[[paste(L$tokens[i])]]
-            }
-            
-            fe_order <- L$f$FunctionSpace$fe_order
-            ## define Rcpp module
-            pde_ <- NULL
-            if (fe_order == 1) { ## linear finite elements
-              pde_ <- new(PDE_2D_ORDER_1, D, pde_type, pde_parameters, L$f)
-            }
-            if (fe_order == 2) { ## quadratic finite elements
-              pde_ <- new(PDE_2D_ORDER_2, D, pde_type, pde_parameters, L$f)
-            }
-            
-            L$f$pde = pde_
-            
-            quad_nodes <- as.matrix(pde_$get_quadrature_nodes())
-            ## evaluate forcing term on quadrature nodes
-            pde_$set_forcing(as.matrix(u(quad_nodes)))
-            
-            ## initialize solver 
-            pde_$init()
-            is_init = TRUE
-            
-            ## set Dirichlet BC 
-            dirichletBC_ <- as.matrix(dirichletBC(pde_$get_dofs_coordinates()))
-            pde_$set_dirichlet_bc(dirichletBC_)
-            is_dirichletBC_set = TRUE
-            
-            ## return
-            .PdeCtr(times = times,
-                    is_dirichletBC_set = is_dirichletBC_set,
-                    is_initialCondition_set = FALSE,
-                    pde_ = pde_,                  # Wraps of C++ class
-                    is_parabolic = is_parabolic,
-                    is_init=is_init)
-          })
+make_pde <- function(L, u, dirichlet_bc = NULL, initial_condition = NULL) {
+    pde_type = extract_pde_type(L)
 
-setMethod("Pde", signature=c(L="DiffOpObject", u="ANY", dirichletBC="ANY", 
-                             initialCondition="ANY"),
-          function(L,u,dirichletBC, initialCondition){
-            D = L$f$FunctionSpace$mesh$data ## C++ R_Mesh class
-            
-            is_parabolic = FALSE
-            if( length(L$f$FunctionSpace$mesh$times) != 0 ) is_parabolic = TRUE
-            times <- L$f$FunctionSpace$mesh$times
-            
-            ## set pde type
-            pde_type <- 0
-            pde_parameters <- NULL
-            if ("diffusion" %in% names(L$params) & !is.matrix(L$params$diffusion)){
-              ## specialized implementation for laplace operator
-              pde_type <- 3L 
-              
-              pde_parameters$diffusion <- 0.0
-              
-            } else {
-              ## general diffusion-transport-reaction problem, constant coefficients
-              pde_type <- 4L
-              
-              pde_parameters$diffusion <- matrix(0, nrow = 2, ncol = 2)
-              
-            }
-            
-            ## prepare pde_parameters list
-            pde_parameters$transport <- matrix(0, nrow = 2, ncol = 1)
-            pde_parameters$reaction  <- 0.0
-            pde_parameters$time <- 0L
-            for(i in 1:length(L$tokens)) {
-              pde_parameters[[paste(L$tokens[i])]] <- L$params[[paste(L$tokens[i])]]
-            }
-            
-            fe_order <- L$f$FunctionSpace$fe_order
-            ## define Rcpp module
-            pde_ <- NULL
-            if (fe_order == 1) { ## linear finite elements
-              pde_ <- new(PDE_2D_ORDER_1, D, pde_type, pde_parameters, L$f)
-            }
-            if (fe_order == 2) { ## quadratic finite elements
-              pde_ <- new(PDE_2D_ORDER_2, D, pde_type, pde_parameters, L$f)
-            }
-            
-            L$f$pde = pde_
-            
-            ## evaluate forcing term on quadrature nodes
-            quad_nodes <- as.matrix(pde_$get_quadrature_nodes())
-            pde_$set_forcing(u(quad_nodes,times))
-            
-            ## initialize solver 
-            pde_$init()
-            is_init = TRUE
-            
-            ## set Dirichlet BC
-            dirichletBC_ <- dirichletBC(pde_$get_dofs_coordinates(), times)
-            pde_$set_dirichlet_bc(dirichletBC_)
-            is_dirichletBC_set = TRUE
-            
-            ## set initial condition
-            pde_$set_initial_condition(initialCondition(pde_$get_dofs_coordinates()))
-            is_initialCondition_set = TRUE
-            
-            ## return
-            .PdeCtr(times = times,
-                    is_dirichletBC_set = is_dirichletBC_set,
-                    is_initialCondition_set = is_initialCondition_set,
-                    pde_ = pde_,                  # Wraps of C++ class
-                    is_parabolic = is_parabolic,
-                    is_init=is_init)
-          })
+    time_domain <- vector()
+    ## prepare pde parameters structure
+    pde_parameters <- NULL
+    pde_parameters$diffusion <- 1.0
+    pde_parameters$transport <- matrix(0, nrow = 2, ncol = 1)
+    pde_parameters$reaction  <- 0.0
 
-setMethod("Pde", signature=c(L="DiffOpObject", u="ANY", dirichletBC="missing", 
-                             initialCondition="missing"),
-          function(L,u,dirichletBC){
-            D = L$f$FunctionSpace$mesh$data ## C++ R_Mesh class
-            
-            is_parabolic = FALSE
-            if( length(L$f$FunctionSpace$mesh$times) != 0 ) is_parabolic = TRUE
-            times <- L$f$FunctionSpace$mesh$times
-            
-            ## set pde type
-            pde_type <- 0
-            pde_parameters <- NULL
-            if ("diffusion" %in% names(L$params) & !is.matrix(L$params$diffusion)){
-              ## specialized implementation for laplace operator
-              pde_type <- 1L 
-              
-              pde_parameters$diffusion <- 0.0
-              
-            } else {
-              ## general diffusion-transport-reaction problem, constant coefficients
-              pde_type <- 2L
-              
-              pde_parameters$diffusion <- matrix(0, nrow = 2, ncol = 2)
-              
+    ## specific function bindings for pde types
+    parse_parameters = list(
+        laplacian = function() {
+            pde_parameters$diffusion <- 1.0
+        },
+        elliptic  = function() {
+            ## recover pde parameters from operator
+            for (i in seq_len(L$tokens)) {
+                pde_parameters[[paste(L$tokens[i])]] <- L$params[[paste(L$tokens[i])]]
             }
-            
-            if(is_parabolic){
-              if(pde_type == 1L){
-                pde_type = 3L
-              }else{
-                pde_type = 4L
-              }
+        },
+        parabolic = function() {
+            time_domain <- L$f$FunctionSpace$mesh$times ## time domain
+            ## recover pde parameters from operator (if any)
+            for (i in seq_len(L$tokens)) {
+                pde_parameters[[paste(L$tokens[i])]] <- L$params[[paste(L$tokens[i])]]
             }
-            
-            ## prepare pde_parameters list
-            pde_parameters$transport <- matrix(0, nrow = 2, ncol = 1)
-            pde_parameters$reaction  <- 0.0
-            pde_parameters$time <- 0L
-            for(i in 1:length(L$tokens)) {
-              pde_parameters[[paste(L$tokens[i])]] <- L$params[[paste(L$tokens[i])]]
-            }
-            
-            fe_order <- L$f$FunctionSpace$fe_order
-            ## define Rcpp module
-            pde_ <- NULL
-            if (fe_order == 1) { ## linear finite elements
-              pde_ <- new(PDE_2D_ORDER_1, D, pde_type, pde_parameters, L$f)
-            }
-            if (fe_order == 2) { ## quadratic finite elements
-              pde_ <- new(PDE_2D_ORDER_2, D, pde_type, pde_parameters, L$f)
-            }
-            
-            L$f$pde = pde_
-            
-            quad_nodes <- as.matrix(pde_$get_quadrature_nodes())
-            ## evaluate forcing term on quadrature nodes
-            if(!is_parabolic){
-              pde_$set_forcing(as.matrix(u(quad_nodes)))
-            }else{
-              pde_$set_forcing(u(quad_nodes, times))
-            }
-            ## initialize solver 
-            pde_$init()
-            is_init = TRUE
-            
-            ## return
-            .PdeCtr(times = times,
-                    is_dirichletBC_set = FALSE,
-                    is_initialCondition_set = FALSE,
-                    pde_ = pde_,                  # Wraps of C++ class
-                    is_parabolic = is_parabolic,
-                    is_init=is_init)
-})
+        }
+        
+    )
+    parse_parameters[[pde_type]]()
+    
+    ## define Rcpp module
+    D <- L$f$FunctionSpace$mesh$cpp_handler ## domain
+    fe_order <- L$f$FunctionSpace$fe_order  ## finite element order
+    pde_ <- NULL
+    if (fe_order == 1) { ## linear finite elements
+        pde_ <- new(cpp_pde_2d_fe1, D, pde_type - 1, pde_parameters)
+    }
+    if (fe_order == 2) { ## quadratic finite elements
+        pde_ <- new(cpp_pde_2d_fe2, D, pde_type - 1, pde_parameters)
+    }
 
+    ## initialize and return
+    quad_nodes <- as.matrix(pde_$get_quadrature_nodes())
+    if(pde_type == pde_type_list$parabolic) {
+        pde_$set_forcing(as.matrix(u(quad_nodes, times)))
+        if (!is.null(initial_condition)) {
+            pde_$set_initial_condition(initial_condition(pde_$get_dofs_coordinates()))
+        }
+    } else {
+        pde_$set_forcing(as.matrix(u(quad_nodes)))
+    }
+    if (!is.null(dirichlet_bc)) {
+        pde_$set_dirichlet_bc(dirichlet_bc(pde_$get_dofs_coordinates()))
+    }
+    pde_$init()
+    return(pde_)
+}
+
+setGeneric("Pde", function(L, u, dirichlet_bc, initial_condition) standardGeneric("Pde"))
+setMethod("Pde", ## space-only pde with boundary conditions
+    signature = c(
+        L = "DiffOpObject", u = "ANY", dirichlet_bc = "ANY",
+        initial_condition = "missing"
+    ),
+    function(L, u, dirichlet_bc) {
+        make_pde(L, u, dirichlet_bc, initial_condition = NULL)
+    }
+)
+setMethod("Pde", ## parabolic pde
+    signature = c(
+        L = "DiffOpObject", u = "ANY", dirichlet_bc = "ANY",
+        initial_condition = "ANY"
+    ),
+    function(L, u, dirichlet_bc, initial_condition) {
+        make_pde(L, u, dirichlet_bc, initial_condition)
+    }
+)
+setMethod("Pde", ## space-only pde with implicitly set homogeneous boundary conditions
+    signature = c(
+        L = "DiffOpObject", u = "ANY", dirichlet_bc = "missing",
+        initial_condition = "missing"
+    ),
+    function(L, u, dirichlet_bc, initial_condition) {
+        make_pde(L, u, dirichlet_bc = NULL, initial_condition = NULL)
+    }
+)

@@ -1,25 +1,25 @@
-\name{fdaPDE-package}
-\alias{fdaPDE-package}
-\alias{fdaPDE}
+\name{fdaPDE2-package}
+\alias{fdaPDE2-package}
+\alias{fdaPDE2}
 \docType{package}
 \title{
-\packageTitle{fdaPDE}
+\packageTitle{fdaPDE2}
 }
 \description{
-\packageDescription{fdaPDE}
+\packageDescription{fdaPDE2}
 }
 \details{
 
 The DESCRIPTION file:
-\packageDESCRIPTION{fdaPDE}
-\packageIndices{fdaPDE}
+\packageDESCRIPTION{fdaPDE2}
+\packageIndices{fdaPDE2}
 ~~ An overview of how to use the package, including the most important ~~
 ~~ functions ~~
 }
 \author{
-\packageAuthor{fdaPDE}
+\packageAuthor{fdaPDE2}
 
-Maintainer: \packageMaintainer{fdaPDE}
+Maintainer: \packageMaintainer{fdaPDE2}
 }
 \references{
 ~~ Literature or other references for background information ~~

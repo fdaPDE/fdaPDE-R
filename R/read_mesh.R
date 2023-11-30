@@ -20,13 +20,15 @@ read_mesh <-function(filename){
   # setting local dimension
   local_dimension <- as.integer(ifelse( identical(which(file=="Tetrahedra"),integer(0)), 2, 3))
   
-  # Nodes
+  # Nodes and boundary markers 
   idx.nodes <- which(file == "Vertices")
   num_nodes <- strtoi(file[idx.nodes+1])
   nodes <- matrix(nrow=num_nodes, ncol=embedding_dimension)
+  boundary <- matrix(nrow=num_nodes, ncol=1)
   for( i in (idx.nodes+2):(idx.nodes+1+strtoi(file[idx.nodes+1]))){
     line <- strsplit(file[i], " ")[[1]]
     nodes[i-(idx.nodes+1),] <- as.numeric(line)[1:embedding_dimension] # coordinates
+    boundary[i-(idx.nodes+1)] <- as.numeric(line)[(embedding_dimension+1)] # boundary markers -> label
   }
   
   # Tringles
@@ -49,23 +51,18 @@ read_mesh <-function(filename){
     }
   }
   
-  if( embedding_dimension == 2 & local_dimension == 2){
-    mesh <- fdaPDE::create.mesh.2D(nodes=nodes, triangles=triangles)
-  }else if(embedding_dimension==3 & local_dimension == 2){
-    mesh <- fdaPDE::create.mesh.2.5D(nodes=nodes, triangles=triangles)
-  }else if(embedding_dimension==3 & local_dimension == 3){
-    mesh <- fdaPDE::create.mesh.3D(nodes=nodes, tetrahedrons = tetrahedra) 
-  }
+  boundary <- matrix((boundary != 0))
+  storage.mode(boundary) <- "integer"
+  storage.mode(triangles)<- "integer"
   
   if(local_dimension == 2){
-    return(list(nodes=mesh$nodes, 
-                elements=mesh$triangles,
-                neigh=mesh$neighbors,
-                boundary= mesh$nodesmarkers))
+    return(list(nodes=nodes, 
+                elements=triangles,
+                boundary= boundary))
   }else{
-    return(list(nodes=mesh$nodes, 
-                elements=mesh$tetrahedrons,
-                neigh=mesh$neighbors,
-                boundary= mesh$nodesmarkers))
+    storage.mode(tetrahedra) <- "integer"
+    return(list(nodes=nodes, 
+                elements=tetrahedra,
+                boundary= boundary))
   }
 }

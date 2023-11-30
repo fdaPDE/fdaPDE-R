@@ -1,40 +1,15 @@
-Package: fdaPDE
+Package: fdaPDE2
 Type: Package
 Version: 2.0-0
 Date: 2023-09-09
 Title: Physics-Informed Spatial and Functional Data Analysis
 Description: An implementation of regression models with partial differential regularizations, making use of the Finite Element Method. The models efficiently handle data distributed over irregularly shaped domains and can comply with various conditions at the boundaries of the domain. A priori information about the spatial structure of the phenomenon under study can be incorporated in the model via the differential regularization. See Sangalli, L. M. (2021). Spatial Regression With Partial Differential Equation Regularisation. International Statistical Review, 89(3), 505-531. for an overview.
-Authors@R: c(person("Eleonora"    , "Arnone"     , role = c("aut", "cre"), email = "eleonora.arnone@polimi.it"),
-             person("Laura M."    , "Sangalli"   , role = c("aut"),        email = "laura.sangalli@polimi.it" ),
-             person("Eardi"       , "Lila"       , role = c("aut"),        email = "elila@uw.edu"             ),
-             person("Jim"         , "Ramsay"     , role = c("aut"),        email = "ramsay@psych.mcgill.ca"   ),
-             person("Luca"        , "Formaggia"  , role = c("aut"),        email = "luca.formaggia@polimi.it" ),
-             person("Giovanni"    , "Ardenghi"   , role = c("ctb")),
-             person("Blerta"      , "Begu"       , role = c("ctb")),
-             person("Michele"     , "Cavazzutti" , role = c("ctb")),
-             person("Aldo"        , "Clemente"   , role = c("ctb")),
-             person("Alessandra"  , "Colli"      , role = c("ctb")),
-             person("Alberto"     , "Colombo"    , role = c("ctb")),
-             person("Luca"        , "Colombo"    , role = c("ctb")),
-             person("Carlo"       , "de Falco"   , role = c("ctb")),
-             person("Enrico"      , "Dall'Acqua" , role = c("ctb")),
-             person("Giulia"      , "Ferla"      , role = c("ctb")),
-             person("Lorenzo"     , "Ghilotti"   , role = c("ctb")),
-             person("Cristina"    , "Galimberti" , role = c("ctb")),
-             person("Jiyoung"     , "Kim"        , role = c("ctb")),
-             person("Martina"     , "Massardi"   , role = c("ctb")),
-             person("Giorgio"     , "Meretti"    , role = c("ctb")),
-             person("Simone"      , "Panzeri"    , role = c("ctb")),
-             person("Giulio"      , "Perin"      , role = c("ctb")),
-             person("Clara"       , "Pigolotti"  , role = c("ctb")),
-             person("Andrea"      , "Poiatti"    , role = c("ctb")),
-             person("Gian Matteo" , "Rinaldi"    , role = c("ctb")),
-             person("Stefano"     , "Spaziani"   , role = c("ctb")),
-             person("Andrea"      , "Vicini"     , role = c("ctb"))
-)
 Maintainer: Eleonora Arnone <eleonora.arnone@polimi.it>
 Depends: R (>= 4.2.0)
-LinkingTo: RcppEigen, Rcpp
+Imports: Rcpp (>= 1.0.7), RcppEigen
+LinkingTo: Rcpp, RcppEigen
+RoxygenNote: 7.2.3
+Encoding: UTF-8
 License: CC BY-NC-SA 4.0
 NeedsCompilation: yes
 SystemRequirements: GNU make
