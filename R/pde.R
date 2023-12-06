@@ -21,7 +21,7 @@ pde_type_list <- list("laplacian" = 1, "elliptic" = 2, "parabolic" = 3)
     Class = "PdeObject",
     fields = c(
         domain = "MeshObject",  ## vector of time instants (parabolic problem only)
-        pde_type = "integer",   ## pde type tag (one in pde_type_list)
+        pde_type = "numeric",   ## pde type tag (one in pde_type_list)
         cpp_pde_handler = "ANY"
     ),
     methods = c(
