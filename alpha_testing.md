@@ -23,7 +23,8 @@ Questa pagina sarà inoltre aggiornata periodicamente per tutta la fase di testi
   
 ## ChangeLog
 
-* 30/11/23: inizio della fase di alpha-testing. Prima versione usabile dell'interfaccia `R`.
+* 30/11/23: inizio della fase di alpha-testing. Prima versione usabile dell'interfaccia `R`
+* 06/11/23: codice testato contro `gcc`, `clang`, `apple-clang` (risolve [3](https://github.com/fdaPDE/fdaPDE-R/issues/3))
 
 ## Installazione
 
