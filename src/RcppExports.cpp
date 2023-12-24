@@ -12,7 +12,6 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 
-RcppExport SEXP _rcpp_module_boot_R_STRPDE();
 RcppExport SEXP _rcpp_module_boot_cpp_lagrange_basis_2d_fe1();
 RcppExport SEXP _rcpp_module_boot_cpp_lagrange_basis_2d_fe2();
 RcppExport SEXP _rcpp_module_boot_cpp_gcv();
@@ -23,10 +22,10 @@ RcppExport SEXP _rcpp_module_boot_cpp_surface_domain();
 RcppExport SEXP _rcpp_module_boot_cpp_3d_domain();
 RcppExport SEXP _rcpp_module_boot_cpp_pde_2d_fe1();
 RcppExport SEXP _rcpp_module_boot_cpp_pde_2d_fe2();
+RcppExport SEXP _rcpp_module_boot_cpp_qsrpde_s();
 RcppExport SEXP _rcpp_module_boot_cpp_srpde();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rcpp_module_boot_R_STRPDE", (DL_FUNC) &_rcpp_module_boot_R_STRPDE, 0},
     {"_rcpp_module_boot_cpp_lagrange_basis_2d_fe1", (DL_FUNC) &_rcpp_module_boot_cpp_lagrange_basis_2d_fe1, 0},
     {"_rcpp_module_boot_cpp_lagrange_basis_2d_fe2", (DL_FUNC) &_rcpp_module_boot_cpp_lagrange_basis_2d_fe2, 0},
     {"_rcpp_module_boot_cpp_gcv", (DL_FUNC) &_rcpp_module_boot_cpp_gcv, 0},
@@ -37,6 +36,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_cpp_3d_domain", (DL_FUNC) &_rcpp_module_boot_cpp_3d_domain, 0},
     {"_rcpp_module_boot_cpp_pde_2d_fe1", (DL_FUNC) &_rcpp_module_boot_cpp_pde_2d_fe1, 0},
     {"_rcpp_module_boot_cpp_pde_2d_fe2", (DL_FUNC) &_rcpp_module_boot_cpp_pde_2d_fe2, 0},
+    {"_rcpp_module_boot_cpp_qsrpde_s", (DL_FUNC) &_rcpp_module_boot_cpp_qsrpde_s, 0},
     {"_rcpp_module_boot_cpp_srpde", (DL_FUNC) &_rcpp_module_boot_cpp_srpde, 0},
     {NULL, NULL, 0}
 };

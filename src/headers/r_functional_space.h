@@ -31,6 +31,7 @@ using fdapde::core::LagrangianBasis;
 using fdapde::core::pointwise_evaluation;
 using fdapde::core::areal_evaluation;
 using fdapde::core::eval;
+using fdapde::core::FEM;
 
 // type-erasure wrapper for a function space object
 struct I_FunctionalSpace {
@@ -62,7 +63,7 @@ template <int M, int N, int R> class R_FunctionalSpace {
    private:
     using DomainType = Mesh<M, N>;
     using FunctionalSpaceType = FunctionalSpace;
-    using QuadratureRule = Integrator<DomainType::local_dimension, R>; // exact for FEM spaces (TODO: generalize)
+    using QuadratureRule = Integrator<FEM, DomainType::local_dimension, R>; // exact for FEM spaces (TODO: generalize)
 
     // internal data
     DomainType domain_ {};

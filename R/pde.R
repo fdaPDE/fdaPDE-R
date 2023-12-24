@@ -21,7 +21,7 @@ pde_type_list <- list("laplacian" = 1, "elliptic" = 2, "parabolic" = 3)
     Class = "PdeObject",
     fields = c(
         domain = "MeshObject",  ## vector of time instants (parabolic problem only)
-        pde_type = "numeric",   ## pde type tag (one in pde_type_list)
+        pde_type = "integer",   ## pde type tag (one in pde_type_list)
         cpp_pde_handler = "ANY"
     ),
     methods = c(
@@ -118,8 +118,8 @@ make_pde <- function(L, u, dirichlet_bc = NULL, initial_condition = NULL) {
     return(pde_)
 }
 
-setGeneric("Pde", function(L, u, dirichlet_bc, initial_condition) standardGeneric("Pde"))
-setMethod("Pde", ## space-only pde with boundary conditions
+setGeneric("PDE", function(L, u, dirichlet_bc, initial_condition) standardGeneric("PDE"))
+setMethod("PDE", ## space-only pde with boundary conditions
     signature = c(
         L = "DiffOpObject", u = "ANY", dirichlet_bc = "ANY",
         initial_condition = "missing"
@@ -128,7 +128,7 @@ setMethod("Pde", ## space-only pde with boundary conditions
         make_pde(L, u, dirichlet_bc, initial_condition = NULL)
     }
 )
-setMethod("Pde", ## parabolic pde
+setMethod("PDE", ## parabolic pde
     signature = c(
         L = "DiffOpObject", u = "ANY", dirichlet_bc = "ANY",
         initial_condition = "ANY"
@@ -137,7 +137,7 @@ setMethod("Pde", ## parabolic pde
         make_pde(L, u, dirichlet_bc, initial_condition)
     }
 )
-setMethod("Pde", ## space-only pde with implicitly set homogeneous boundary conditions
+setMethod("PDE", ## space-only pde with implicitly set homogeneous boundary conditions
     signature = c(
         L = "DiffOpObject", u = "ANY", dirichlet_bc = "missing",
         initial_condition = "missing"

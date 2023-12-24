@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef __R_GSRPDE_H__
-#define __R_GSRPDE_H__
+#ifndef __R_QSRPDE_H__
+#define __R_QSRPDE_H__
 
 // we only include RcppEigen.h which pulls Rcpp.h in for us
 #include <RcppEigen.h>
@@ -24,31 +24,24 @@
 #include <fdaPDE/utils/symbols.h>
 #include <fdaPDE/models.h>
 #include "r_pde.h"
-using fdapde::models::GSRPDE;
-using fdapde::models::Distribution;
+using fdapde::models::QSRPDE;
 using fdapde::models::Sampling;
 using fdapde::models::GCV;
 
 template <typename RegularizationType>
-class R_GSRPDE {
+class R_QSRPDE {
 private:
-  using ModelType = GSRPDE<RegularizationType>;
+  using ModelType = QSRPDE<RegularizationType>;
   ModelType model_; // statistical model to wrap
   GCV* gcv_ptr_ = nullptr; // model's view pointer to be wrapped as external pointer
   BlockFrame<double, int> data_;
 public:
-  R_GSRPDE(Rcpp::Environment pde, int sampling_type, std::string distribution) {
+  R_QSRPDE(Rcpp::Environment pde, int sampling_type) {
     // recover pointer to penalty
     SEXP pdeptr = pde[".pointer"];
     PDEWrapper* ptr = reinterpret_cast<PDEWrapper*>(R_ExternalPtrAddr(pdeptr));
-    // instantiate probability distribution object
-    Distribution distr;
-    if(distribution == "poisson")     distr = fdapde::models::Poisson();
-    if(distribution == "gamma"  )     distr = fdapde::models::Gamma();
-    if(distribution == "exponential") distr = fdapde::models::Exponential();
-    if(distribution == "bernulli")    distr = fdapde::models::Bernulli();
     // set model instance
-    model_ = ModelType(ptr->get_pde(), Sampling(sampling_type), distr);
+    model_ = ModelType(ptr->get_pde(), Sampling(sampling_type));
     gcv_ptr_ = new GCV(model_);   // set up pointer to gcv functor
   }
   // setters
@@ -57,6 +50,7 @@ public:
   void set_covariates(const DMatrix<double>& X) { data_.template insert<double>(DESIGN_MATRIX_BLK, X); }
   void set_fpirls_tolerance(double tol) { model_.set_fpirls_tolerance(tol); }
   void set_fpirls_max_iter(std::size_t max_iter) { model_.set_fpirls_max_iter(max_iter); }
+  void set_alpha(double alpha) { model_.set_alpha(alpha); }
   // getters
   const DVector<double>& f() const { return model_.f(); }
   DMatrix<double> fitted() const { return model_.fitted(); }
@@ -68,9 +62,9 @@ public:
   void solve() { model_.solve(); }
   Rcpp::XPtr<GCV> get_gcv() { return Rcpp::XPtr<GCV>(gcv_ptr_); }
   // destructor
-  ~R_GSRPDE() {
+  ~R_QSRPDE() {
     delete gcv_ptr_;
   };
 };
 
-#endif // __R_GSRPDE_H__
+#endif // __R_SRPDE_H__

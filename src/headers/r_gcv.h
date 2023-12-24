@@ -35,7 +35,7 @@ private:
   GCV* gcv_; // gcv functor
 public:
   R_GCV(Rcpp::XPtr<GCV> gcv) {
-    // recover pointer to model
+    // recover pointer to model's GCV functor
     gcv_ = gcv.get();
   }
   // calibrate model_ using a gcv approach, customized with the given parameters

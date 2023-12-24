@@ -33,7 +33,7 @@
     fields = c(
         mesh = "ANY",         ## ???
         function_space = "CppFunctionSpace",  ## cpp backend
-        fe_order = "integer"  ## this is specific for fem, must be generalized
+        fe_order = "numeric"  ## this is specific for fem, must be generalized
     ),
     methods = c(
         get_basis = function() { return(function_space) },

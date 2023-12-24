@@ -56,7 +56,7 @@ struct PDEWrapper {
 template <int M, int N, int R> class R_PDE : public PDEWrapper {
    private:
     using DomainType = Mesh<M, N>;
-    using QuadratureRule = Integrator<DomainType::local_dimension, R>;
+    using QuadratureRule = Integrator<FEM, DomainType::local_dimension, R>;
     template <typename L> using PDEType = PDE<DomainType, L, DMatrix<double>, FEM, fem_order<R>>;
 
     // internal data
@@ -106,8 +106,8 @@ template <int M, int N, int R> class R_PDE : public PDEWrapper {
     DMatrix<double> get_quadrature_nodes() const { return integrator_.quadrature_nodes(domain_); };
     DMatrix<double> get_dofs_coordinates() const { return pde_.dof_coords(); };
     // avaiable only after initialization
-    const SpMatrix<double>& R0() const { return pde_.R0(); }
-    const SpMatrix<double>& R1() const { return pde_.R1(); }
+    const SpMatrix<double>& R0() const { return pde_.mass(); }
+    const SpMatrix<double>& R1() const { return pde_.stiff(); }
     const DMatrix<double>& u() const { return pde_.force(); }
     // initialize internal pde status
     void init() { pde_.init(); }
