@@ -23,6 +23,17 @@
 !R/*
 !man/
 !man/*
+!.gitignore
+!data/
+!data/*
+!DESCRIPTION
+!NAMESPACE
+inst/doc
+
+# specific files and extensions to be exluded
+
+.DS_Store
+
 *.txt
 *.json
 *.cmake
@@ -34,9 +45,3 @@
 *.RData
 *.o
 *.so
-!.gitignore
-!data/
-!data/*
-!DESCRIPTION
-!NAMESPACE
-inst/doc
