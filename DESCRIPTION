@@ -6,9 +6,9 @@ Title: Physics-Informed Spatial and Functional Data Analysis
 Description: An implementation of regression models with partial differential regularizations, making use of the Finite Element Method. The models efficiently handle data distributed over irregularly shaped domains and can comply with various conditions at the boundaries of the domain. A priori information about the spatial structure of the phenomenon under study can be incorporated in the model via the differential regularization. See Sangalli, L. M. (2021). Spatial Regression With Partial Differential Equation Regularisation. International Statistical Review, 89(3), 505-531. for an overview.
 Maintainer: Eleonora Arnone <eleonora.arnone@polimi.it>
 Depends: R (>= 4.2.0)
-Imports: Rcpp (>= 1.0.7), RcppEigen
-LinkingTo: Rcpp, RcppEigen
-RoxygenNote: 7.2.3
+Imports: Rcpp (>= 1.0.7), RcppEigen, R6
+LinkingTo: Rcpp, RcppEigen, R6
+RoxygenNote: 7.3.0
 Encoding: UTF-8
 License: CC BY-NC-SA 4.0
 NeedsCompilation: yes

@@ -1,210 +1,185 @@
-simple_laplacian_penalty <- function(D, fe_order = 1L) {
-    ## generate simple laplacian regularization
-    L <- -laplace(Function(FunctionSpace(D, as.integer(fe_order))))
-    u <- function(points) { ## homogeneous forcing term
-        return(matrix(0, nrow = nrow(points), ncol = 1))
+## TODOs:
+## TODO fdaPDE_Model: add support for function evaluation
+## TODO fdaPDE_Model: add support for timing of execution times
+## TODO fdaPDE_Model: add support for areal sampling
+## TODO fdaPDE_Regression_Model: implement regression data sanity checks:
+##      - coherence between locations and observations dimensions
+## TODO fdaPDE_Model: add support for space-time models
+## TODO: fix error raised when multiple SRPDE model are initialized one after the other
+
+# fdaPDE_Model class ----
+
+## interface for a generic fdaPDE model
+fdaPDE_Model <- R6::R6Class(
+  classname = "fdaPDE_Model",
+  public = list(
+    ## data
+    domain = NULL,
+    locations = NULL,
+    ## utils
+    model_traits = list(),
+    VERBOSE = FALSE,
+    ## constructor
+    initialize = function(VERBOSE = FALSE) {
+      self$VERBOSE <- VERBOSE
     }
-    return(PDE(L, u))
-}
-
-## seed and n_mc_samples meaningfull only for stochastic edf_computation
-gcv <- function(optimizer, lambda, edf_computation = c("stochastic", "exact"),
-                seed = NULL, mc_samples = NULL, max_iter = NULL, step = NULL, tolerance = NULL) {
-    gcv_params <- list(
-        calibration_type = "gcv",
-        ## properties related to the computation of the expected degrees of freedom
-        edf_computation = match.arg(edf_computation),
-        seed = seed,
-        mc_samples = mc_samples,
-        ## properties related to the optimization algorithm
-        optimizer = optimizer,
-        lambda = lambda,
-        max_iter = max_iter,
-        step = step,
-        tolerance = tolerance
-    )
-    return(gcv_params)
-}
-
-is_nonparametric <- function(formula, data) {
-    return(length(labels(terms(formula))) == 1 &&
-        !(labels(terms(formula))[1] %in% colnames(data)))
-}
-
-is_in_list <- function(key, list) {
-    if(!is.character(key)) stop("invalid key to list argument")
-    return(key %in% names(list))
-}
-
-parse_fpirls_args <- function(cpp_model, args) {
-    if (is_in_list("fpirls_params", args)) {
-        if (is_in_list("tolerance", args[["fpirls_params"]])) {
-            cpp_model$set_fpirls_tolerance(as.double(args[["fpirls_params"]]$tolerance))
-        }
-        if (is_in_list("max_iter", args[["fpirls_params"]])) {
-            cpp_model$set_fpirls_max_iter(as.integer(args[["fpirls_params"]]$max_iter))
-        }
+  ),
+  private = list(
+    ## model instance
+    cpp_model = NULL,
+    ## utils
+    display = function(message) {
+      if (self$VERBOSE) {
+        cat(paste(message, "\n", sep = ""))
+      }
+    },
+    sanity_check_domain = function(data) {
+      self$domain <- data$domain
+      if (is.null(data$locations)) {
+        self$model_traits$sampling_type <- Sampling(0)
+        self$locations <- data$domain$nodes
+      } else {
+        self$model_traits$sampling_type <- Sampling(1)
+        self$locations <- data$locations
+      }
+      ## TODO: support for areal sampling
     }
-}
-
-#' S3 dispatch to fit argument processing
-#' @export
-parse_eval_args <- function(x, ...) UseMethod("parse_eval_args")
-
-#' @export
-parse_eval_args.sr <- function(x, ...) {
-    return(invisible(NULL))
-}
-
-#' @export
-parse_eval_args.gsr <- function(x, ...) {
-    args <- list(...)
-    cpp_model_ <- args$cpp_model
-    ## parse and set FPIRLS parameters, if provided
-    parse_fpirls_args(cpp_model_, args)
-}
-
-#' @export
-parse_eval_args.qsr <- function(x, ...) {
-    args <- list(...)
-    cpp_model_ <- args$cpp_model
-    ## parse and set FPIRLS parameters, if provided
-    parse_fpirls_args(cpp_model_, args)
-    ## set quantile level
-    if(is_in_list("alpha", args)) {
-        alpha = as.double(args[["alpha"]])
-        if ( alpha <= 0 || alpha > 1 ) stop("quantile level alpha should be between 0 and 1")
-        cpp_model_$set_alpha(as.double(args[["alpha"]]))
-    }
-}
-
-## utility R wrapper around C++ PDE concept
-.RegressionModelCtr <- setRefClass(
-    Class = "FdaPDEModel",
-    fields = c(
-        cpp_model  = "ANY", ## C++ model backend
-        cpp_gcv    = "ANY", ## C++ gcv functor backend
-        lambda_fixed = "logical",
-        spatial_field = "FunctionObject",
-        model_tag  = "ANY"  ## model type tag
-    ),
-    methods = c(
-        fit = function(...) {
-            args <- list(...)
-            ## customize fitting behaviour, depending on model type tag
-            parse_eval_args(model_tag, cpp_model, args)
-            ## set up calibration approach
-            if (is_in_list("lambda", args)) {
-                if (args[["lambda"]]$calibration_type == "gcv") {
-                    ## require GCV-based selection of smoothing parameter
-                    cpp_model$init()
-                    cpp_gcv$calibrate(args[["lambda"]]) ## forward arguments
-
-                    ## final fit with optimal lambda
-                    opt_lambda = args[["lambda"]]$lambda[which.min(cpp_gcv$gcvs())]
-                    cpp_model$set_lambda_D(opt_lambda)
-                    cpp_model$init()
-                    cpp_model$solve()
-                }
-            } else if (lambda_fixed) { ## fit with provided lambda
-                cpp_model$init()
-                cpp_model$solve()
-            } else {
-                ## default
-                stop("using default")
-            }
-            spatial_field$coeff = as.matrix(cpp_model$f())
-        },
-        gcvs = function() { return(cpp_gcv$gcvs()) },
-        edfs = function() { return(cpp_gcv$edfs()) }
-    )
+  )
 )
 
-setGeneric("SRPDE", function(formula, data, domain, penalty, ...) { standardGeneric("SRPDE") })
+## fdaPDE_Regression_Model models ----
 
-.SRPDE <- function(formula, data, domain, penalty, lambda,
-                   family = c("gaussian", "poisson", "exponential", "gamma", "bernulli", "quantile")) {
-    ## count number of terms in formula which are not covariates
-    count <- 0
-    field_name <- NULL
-    for (term in labels(terms(formula))) {
-        if (!term %in% colnames(data)) {
-            count <- count + 1
-            field_name <- term
-        }
+## interface for a generic regression model
+fdaPDE_Regression_Model <- R6::R6Class(
+  classname = "fdaPDE_Regression_Model",
+  inherit = fdaPDE_Model,
+  public = list(
+    ## regression data
+    observations = NULL,
+    covariates = NULL,
+    ## results
+    results = list()
+  ),
+  private = list(
+    ## calibrator instance
+    cpp_calibrator = NULL,
+    ## utilities
+    init_calibrator = function(calibrator) {
+      private$cpp_calibrator <- calibrators_factory(calibrator)
+    },
+    sanity_check_data = function(formula = NULL, data, penalty) {
+      ## domain infotmations
+      super$sanity_check_domain(data)
+      ## regression data
+      private$sanity_check_regression_data(formula, data)
+      ## smoother parameters
+      smoother_params <- smoother("SRPDE",
+        penalty = penalty,
+        sampling_type = self$model_traits$sampling_type
+      )
+      return(smoother_params)
+    },
+    init_model = function(smoother_params) {
+      super$cpp_model <- regression_models_factory(
+        self$domain,
+        smoother_params
+      )
+      ## set locations
+      super$cpp_model$set_spatial_locations(as.matrix(self$locations))
+      super$display("  Locations have been set.")
+      ## set data
+      super$cpp_model$set_observations(as.matrix(self$observations))
+      super$display("  Observations have been set.")
+      if (!is.null(self$covariates)) {
+        super$cpp_model$set_covariates(as.matrix(self$covariates))
+        super$display("  Covariates have been set.")
+      }
+    },
+    sanity_check_regression_data = function(formula, data) {
+      self$observations <- data$observations
+      self$covariates <- data$covariates
+      ## TODO: check coherence between observations and locations dimensions
+    },
+    calibrate = function(lambda) {
+      ## mondel initialization (necessary for GCV and KCV calibration strategies)
+      super$cpp_model$init()
+      ## calibration
+      private$cpp_calibrator$set_lambda(lambda)
+      if (private$cpp_calibrator$get_calibration_strategy() != 1) {
+        lambda_opt <- private$cpp_calibrator$fit(super$cpp_model$get_view())
+      } else {
+        lambda_opt <- private$cpp_calibrator$fit(super$cpp_model$get_gcv())
+      }
+      ## statistical model preparation for fit with optimal lambda
+      private$set_lambda(lambda_opt)
+      ## save calibrator's results
+      self$results$calibrator$lambda_opt <- lambda_opt
+      if (private$cpp_calibrator$get_calibration_strategy() == 1) {
+        self$results$calibrator$edfs <- as.matrix(private$cpp_calibrator$edfs())
+        self$results$calibrator$gcvs <- as.matrix(private$cpp_calibrator$gcvs())
+      }
+      if (private$cpp_calibrator$get_calibration_strategy() == 2) {
+        self$results$calibrator$avg_scores <- as.matrix(private$cpp_calibrator$avg_scores())
+        self$results$calibrator$std_scores <- as.matrix(private$cpp_calibrator$std_scores())
+        self$results$calibrator$scores <- as.matrix(private$cpp_calibrator$scores())
+      }
+    },
+    set_lambda = function(lambda) {
+      super$cpp_model$set_lambda(lambda[1])
+    },
+    fit = function() {
+      ## fitting the statistical model using the optimal lambda set by the calibrator
+      super$cpp_model$init()
+      super$cpp_model$solve()
+      ## save fit results
+      self$results$f <- as.matrix(super$cpp_model$f())
+      self$results$beta <- as.matrix(super$cpp_model$beta())
     }
-    if (count == 0) stop("no spatial field found in formula.")
-    if (count >= 2) stop("more than one spatial field supplied in formula.")
-    ## if not supplied, default to simple laplacian penalty
-    if (is.null(penalty)) {
-        penalty <- simple_laplacian_penalty(domain)
-        ## inject field in calling environment
-        field <- Function(FunctionSpace(domain))
-        eval(parse(text = paste(field_name, "<<- field", sep = "")))
-    } else {
-        ## TODO: check that name of the spatial field in formula coincide with name of field in penalty
-        
-    }
-    ## extract data according to formula
-    obs <- data[all.vars(formula)[1]]
-    cov <- NULL
-    if (!is_nonparametric(formula, data)) {
-        covariates <- labels(terms(formula))
-        covariates <- covariates[!covariates == field_name]
-        cov <- as.matrix(data[covariates])
-    }
-    ## create model object
-    model_ <- NULL ## C++ model backend
-    model_tag <- list() ## model type tag
-    family_ <- match.arg(family)
-    model_ <- switch(family_,
-        "gaussian" = {
-            class(model_tag) <- "sr"
-            new(cpp_srpde, penalty, 0)
-        },
-        "quantile" = {
-            class(model_tag) <- "qsr"
-            new(cpp_qsrpde_s, penalty, 0)
-        },
-        { ## default case
-            class(model_tag) <- "gsr"
-            new(cpp_gsrpde_s, penalty, 0, family_)
-        }
-    )
-    model_$set_observations(as.matrix(obs))
-
-    if (!is.null(lambda)) model_$set_lambda_D(lambda)
-    if (!is.null(cov)) model_$set_covariates(as.matrix(cov))
-
-    return(.RegressionModelCtr(
-        cpp_model = model_,
-        model_tag = model_tag,
-        lambda_fixed = !is.null(lambda),
-        cpp_gcv = new(cpp_gcv, model_$get_gcv()),
-        spatial_field = field
-    ))
-}
-
-#' @export
-setMethod(
-    f = "SRPDE",
-    signature = c(
-        formula = "formula", data = "ANY", domain = "MeshObject", penalty = "missing"
-    ),
-    ## default to simple laplacian penalty
-    definition = function(formula, data, domain, lambda = NULL, family = "gaussian") {
-        .SRPDE(formula, data, domain, NULL, lambda, family)
-    }
+  )
 )
 
+
+### SRPDE model implementation ----
+
 #' @export
-setMethod(
-    f = "SRPDE",
-    signature = c(
-        formula = "formula", data = "ANY", domain = "missing", penalty = "ANY"
-    ),
-    ## general penalty (domain information indirectly supplied from penalty)
-    definition = function(formula, data, penalty, lambda = NULL, family = "gaussian") {
-        .SRPDE(formula, data, NULL, penalty, lambda, family)
+SRPDE <- R6::R6Class(
+  classname = "SRPDE_model",
+  inherit = fdaPDE_Regression_Model,
+  public = list(
+    ## constructor
+    initialize = function(formula = NULL, data,
+                          penalty = simple_laplacian_penalty(),
+                          solver = NULL,
+                          calibrator = off(),
+                          VERBOSE = FALSE) {
+      super$initialize(VERBOSE)
+      super$display("\n\nSRPDE model\n")
+      ## calibrator initialization
+      super$display("- Calibrator initialization")
+      super$init_calibrator(calibrator)
+      ## inputs sanity check
+      super$display("- Inputs sanity check")
+      smoother_params <- super$sanity_check_data(formula, data, penalty)
+      ## model initialization
+      super$display("- Model initialization")
+      super$init_model(smoother_params)
+    },
+    ## utilities
+    fit = function(lambda = hyperparameters(1e-4),
+                   calibrator = NULL) {
+      ## clear previous results
+      self$results <- list()
+      ## calibrator update
+      if (!is.null(calibrator)) {
+        super$init_calibrator(calibrator)
+      }
+      ## calibration
+      super$display("- Calibration")
+      super$calibrate(lambda)
+      ## fit
+      super$display("- Fit")
+      super$fit()
     }
+  ),
+  private = list()
 )
