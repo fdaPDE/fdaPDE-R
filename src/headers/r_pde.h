@@ -91,7 +91,7 @@ template <int M, int N, int R> class R_PDE : public PDEWrapper {
         case pde_type::second_order_parabolic: {
             SMatrix<M> K = Rcpp::as<DMatrix<double>>(pde_parameters_["diffusion"]);
             auto L = dt<FEM>() + diffusion<FEM>(K) + advection<FEM>(b) + reaction<FEM>(c);
-            pde_ = PDEType<decltype(L)>(domain_, L);
+            pde_ = PDEType<decltype(L)>(domain_, DVector<double>(), L);
         } break;
         }
     }
