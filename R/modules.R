@@ -21,3 +21,6 @@ Rcpp::loadModule("cpp_lagrange_basis_2d_fe2", TRUE)
 Rcpp::loadModule("cpp_off", TRUE)
 Rcpp::loadModule("cpp_gcv", TRUE)
 Rcpp::loadModule("cpp_kcv", TRUE)
+
+## regression models
+Rcpp::loadModule("cpp_srpde", TRUE)

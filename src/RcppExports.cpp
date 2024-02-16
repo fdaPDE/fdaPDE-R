@@ -23,6 +23,7 @@ RcppExport SEXP _rcpp_module_boot_cpp_surface_domain();
 RcppExport SEXP _rcpp_module_boot_cpp_3d_domain();
 RcppExport SEXP _rcpp_module_boot_cpp_pde_2d_fe1();
 RcppExport SEXP _rcpp_module_boot_cpp_pde_2d_fe2();
+RcppExport SEXP _rcpp_module_boot_cpp_srpde();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_cpp_off", (DL_FUNC) &_rcpp_module_boot_cpp_off, 0},
@@ -36,6 +37,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_cpp_3d_domain", (DL_FUNC) &_rcpp_module_boot_cpp_3d_domain, 0},
     {"_rcpp_module_boot_cpp_pde_2d_fe1", (DL_FUNC) &_rcpp_module_boot_cpp_pde_2d_fe1, 0},
     {"_rcpp_module_boot_cpp_pde_2d_fe2", (DL_FUNC) &_rcpp_module_boot_cpp_pde_2d_fe2, 0},
+    {"_rcpp_module_boot_cpp_srpde", (DL_FUNC) &_rcpp_module_boot_cpp_srpde, 0},
     {NULL, NULL, 0}
 };
 
