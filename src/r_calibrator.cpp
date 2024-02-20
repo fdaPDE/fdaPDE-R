@@ -25,27 +25,29 @@ RCPP_MODULE(cpp_off) {
     Rcpp::class_<R_OFF>("cpp_off")
       .constructor<Rcpp::List>() 
       .method("get_calibration_strategy",   &R_OFF::get_calibration_strategy      )
-      .method("set_lambda",                 &R_OFF::set_lambda                    )
+      .method("configure_calibrator",       &R_OFF::configure_calibrator          )
+      .method("optimum",                    &R_OFF::optimum                       )
       .method("fit",                        &R_OFF::fit                           );    
 }
  
-using cpp_gcv = R_GCV; 
-RCPP_MODULE(cpp_gcv) { 
-    Rcpp::class_<R_GCV>("cpp_gcv")
-      .constructor<Rcpp::List>()
-      .method("get_calibration_strategy",   &R_GCV::get_calibration_strategy      ) 
-      .method("set_lambda",                 &R_GCV::set_lambda                    )
-      .method("fit",                        &R_GCV::fit                           )
-      .method("gcvs",                       &R_GCV::gcvs                          ) 
-      .method("edfs",                       &R_GCV::edfs                          );
-}
+// using cpp_gcv = R_GCV; 
+// RCPP_MODULE(cpp_gcv) { 
+//     Rcpp::class_<R_GCV>("cpp_gcv")
+//       .constructor<Rcpp::List>()
+//       .method("get_calibration_strategy",   &R_GCV::get_calibration_strategy      )
+//       .method("configure_calibrator",       &R_GCV::configure_calibrator          )
+//       .method("optimum",                    &R_GCV::optimum                       )
+//       .method("fit",                        &R_GCV::fit                           )
+//       .method("gcvs",                       &R_GCV::gcvs                          ) 
+//       .method("edfs",                       &R_GCV::edfs                          );
+// }
 
 using cpp_kcv = R_KCV;
 RCPP_MODULE(cpp_kcv) {
     Rcpp::class_<R_KCV>("cpp_kcv")
       .constructor<Rcpp::List>()
       .method("get_calibration_strategy",   &R_KCV::get_calibration_strategy      )
-      .method("set_lambda",                 &R_KCV::set_lambda                    )
+      .method("configure_calibrator",       &R_KCV::configure_calibrator          )
       .method("fit",                        &R_KCV::fit                           )
       .method("avg_scores",                 &R_KCV::avg_scores                    )
       .method("std_scores",                 &R_KCV::std_scores                    )

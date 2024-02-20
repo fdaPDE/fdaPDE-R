@@ -34,14 +34,29 @@ hyperparameters <- function(lambda_D, lambda_T = 0) {
 ## data ----
 
 #' @export
-spatial_model_data <- function(domain, observations,
-                               covariates = NULL, locations = NULL) {
+spatial_data <- function(domain, observations,
+                         locations = NULL,
+                         covariates = NULL) {
   data <- list(
-    type = "spatial_model_data",
+    type = "spatial_data",
     domain = domain,
     locations = locations,
     observations = observations,
     covariates = covariates
+  )
+  return(data)
+}
+
+#' @export
+functional_data <- function(domain, X,
+                            locations = NULL,
+                            w = NULL) {
+  data <- list(
+    type = "functional_data",
+    domain = domain,
+    locations = locations,
+    X = X,
+    w = w
   )
   return(data)
 }
@@ -93,7 +108,7 @@ kcv <- function(n_folds = 10, shuffle = TRUE, seed = NULL) {
 }
 
 #' @export
-calibrator <- function(strategy = c("off", "gcv", "kcv"), ...) {
+calibration <- function(strategy = c("off", "gcv", "kcv"), ...) {
   calibrator_params <- switch(match.arg(strategy),
     "off" = {
       off(...)
@@ -112,8 +127,8 @@ calibrator <- function(strategy = c("off", "gcv", "kcv"), ...) {
 ## smoother ----
 
 #' @export
-smoother <- function(name = c("SRPDE"), penalty = simple_laplacian_penalty(),
-                     sampling_type = c("mesh_nodes", "pointwise", "areal")) {
+smoothing <- function(name = c("SRPDE"), penalty = simple_laplacian_penalty(),
+                      sampling_type = c("mesh_nodes", "pointwise", "areal")) {
   smoother_params <- list(
     smoother_name = match.arg(name),
     penalty = penalty,

@@ -73,16 +73,16 @@ fdaPDE_Regression_Model <- R6::R6Class(
       ## regression data
       private$sanity_check_regression_data(formula, data)
       ## smoother parameters
-      smoother_params <- smoother("SRPDE",
+      smoother <- smoothing("SRPDE",
         penalty = penalty,
         sampling_type = self$model_traits$sampling_type
       )
-      return(smoother_params)
+      return(smoother)
     },
-    init_model = function(smoother_params) {
+    init_model = function(smoother) {
       super$cpp_model <- regression_models_factory(
         self$domain,
-        smoother_params
+        smoother
       )
       ## set locations
       super$cpp_model$set_spatial_locations(as.matrix(self$locations))
@@ -104,7 +104,7 @@ fdaPDE_Regression_Model <- R6::R6Class(
       ## mondel initialization (necessary for GCV and KCV calibration strategies)
       super$cpp_model$init()
       ## calibration
-      private$cpp_calibrator$set_lambda(lambda)
+      private$cpp_calibrator$configure_calibrator(lambda)
       if (private$cpp_calibrator$get_calibration_strategy() != 1) {
         lambda_opt <- private$cpp_calibrator$fit(super$cpp_model$get_view())
       } else {
@@ -113,7 +113,7 @@ fdaPDE_Regression_Model <- R6::R6Class(
       ## statistical model preparation for fit with optimal lambda
       private$set_lambda(lambda_opt)
       ## save calibrator's results
-      self$results$calibrator$lambda_opt <- lambda_opt
+      self$results$calibrator$lambda_opt <- private$cpp_calibrator$optimum()
       if (private$cpp_calibrator$get_calibration_strategy() == 1) {
         self$results$calibrator$edfs <- as.matrix(private$cpp_calibrator$edfs())
         self$results$calibrator$gcvs <- as.matrix(private$cpp_calibrator$gcvs())
@@ -182,4 +182,126 @@ SRPDE <- R6::R6Class(
     }
   ),
   private = list()
+)
+
+## functional centering models ----
+fCentering <- R6::R6Class(
+  classname = "fCentering",
+  inherit = fdaPDE_Model,
+  public = list(
+    ## data
+    X = NULL, ## data to center
+    w = NULL, ## weights
+    ## results
+    results = list(),
+    ## constructor
+    initialize = function(data,
+                          smoother = smoothing(),
+                          calibrator = off(),
+                          VERBOSE = FALSE) {
+      super$initialize(VERBOSE)
+      super$display("\n\nCentering model\n")
+      ## inputs sanity check
+      super$display("- Inputs sanity check")
+      private$sanity_check_data(data, penalty)
+      ## Centering initialization
+      super$display("- Centering initialization")
+      private$init_centering()
+      ## calibrator initialization
+      super$display("- Calibrator initialization")
+      private$init_calibrator(calibrator)
+      ## smoother initialization
+      super$display("- Smoother initialization")
+      private$init_smoother(smoother)
+    },
+    ## utilities
+    fit = function(lambda = hyperparameters(1e-4),
+                   smoother = NULL, calibrator = NULL) {
+      ## clear previous results
+      self$results <- list()
+      ## smoother update
+      if (!is.null(smoother)) {
+        super$display("- Smoother re-initialization")
+        private$init_smoother(smoother)
+      }
+      ## calibrator update
+      if (!is.null(calibrator)) {
+        super$display("- Calibrator re-initialization")
+        private$init_calibrator(calibrator)
+      }
+      ## calibrato configuration
+      super$display("- Calibrator configuration")
+      super$cpp_model$set_calibrator(
+        private$cpp_calibrator$configure_calibrator(lambda)
+      )
+      # centering laveraging the selected calibrator
+      super$display("- Centering")
+      super$cpp_model$set_lambda(lambda)
+      super$cpp_model$init()
+      super$cpp_model$solve()
+      ## save fit results
+      self$results$mean <- as.matrix(super$cpp_model$mean())
+      self$results$centered <- as.matrix(super$cpp_model$centered())
+    }
+  ),
+  private = list(
+    ## smoother instance
+    cpp_smoother = NULL,
+    ## calibrator instance
+    cpp_calibrator = NULL,
+    ## initialize utilities
+    sanity_check_data = function(data, penalty) {
+      ## domain informations
+      super$sanity_check_domain(data)
+      ## regression data
+      private$sanity_check_centering_data(data)
+    },
+    sanity_check_centering_data = function(data) {
+      self$X <- data$X
+      self$w <- data$w
+      ## TODO: check coherence between X and locations dimensions
+      ## TODO: check coherence between X and w dimensions
+    },
+    init_centering = function() {
+      super$cpp_model <- new(cpp_center)
+      ## set data
+      super$cpp_model$set_data(as.matrix(self$X))
+      super$display("  Data have been set.")
+      if (!is.null(self$w)) {
+        super$cpp_model$set_weights(as.matrix(self$w))
+        super$display("  Weights have been set.")
+      }
+    },
+    init_calibrator = function(calibrator_params) {
+      ## init calibrator
+      private$cpp_calibrator <- calibrators_factory(calibrator_params)
+    },
+    init_smoother = function(smoother_params) {
+      ## init calibrator
+      smoother_params$sampling_type <- self$model_traits$sampling_type
+      private$cpp_smoother <- regression_models_factory(
+        self$domain,
+        smoother_params
+      )
+      ## set locations
+      private$cpp_smoother$set_spatial_locations(as.matrix(self$locations))
+      super$display("  Locations have been set.")
+      ## set calibrator into cpp_model
+      super$cpp_model$set_smoother(private$cpp_smoother$get_view())
+    },
+    ## fit utilities
+    save_calibration_results = function() {
+      ## save calibrator's results
+      self$results$calibrator$lambda_opt <- private$cpp_calibrator$optimum()
+      if (private$cpp_calibrator$get_calibration_strategy() == 1) {
+        self$results$calibrator$edfs <- as.matrix(private$cpp_calibrator$edfs())
+        self$results$calibrator$gcvs <- as.matrix(private$cpp_calibrator$gcvs())
+      }
+      if (private$cpp_calibrator$get_calibration_strategy() == 2) {
+        self$results$calibrator$avg_scores <- as.matrix(private$cpp_calibrator$avg_scores())
+        self$results$calibrator$std_scores <- as.matrix(private$cpp_calibrator$std_scores())
+        self$results$calibrator$scores <- as.matrix(private$cpp_calibrator$scores())
+      }
+    }
+  )
 )
