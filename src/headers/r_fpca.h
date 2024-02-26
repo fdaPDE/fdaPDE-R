@@ -77,7 +77,7 @@ template<typename RegularizationType> class R_FPCA {
     // utilities
     void init() { 
       load_solver();
-      model_.init_model();
+      model_.init();
     }
     void solve() { model_.solve(); }
   protected:
@@ -89,7 +89,6 @@ template<typename RegularizationType> class R_FPCA {
     void load_solver() {
       if(calibration_strategy_ == Calibration::off){
         model_.set_solver(solver_());
-        std::cout << lambda_grid_.front()[0] << std::endl;
         model_.set_lambda_D(lambda_grid_.front()[0]);
       } else {
         model_.set_solver(solver_(lambda_grid_));

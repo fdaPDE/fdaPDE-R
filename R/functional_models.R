@@ -238,11 +238,8 @@ fdaPDE_Functional_Model <- R6::R6Class(
     ## fit utils
     fit = function() {
       ## fitting the statistical model
-      print("f_fit")
       super$cpp_model$init()
-      print("f_fit")
       super$cpp_model$solve()
-      print("f_fit")
     },
     ## cpp_model interfaces
     set_lambda = function(lambda) {
@@ -303,9 +300,7 @@ fPCA_class <- R6::R6Class(
       ## fit
       super$display("- Fit")
       super$set_lambda(super$functional_model$solver$lambda)
-      print("ciao")
       super$fit()
-      print("ciao")
       ## save results
       super$display("- Save results")
       self$results$scores <- super$get_scores()
@@ -336,7 +331,23 @@ fPCA <- function(data,
   ## while providing a clear interface to the final user
   fPCA_model <- fPCA_init()
   fPCA_model$penalty <- penalty
-  fPCA_model$center <- center
+  fPCA_model$center <- ifelse(
+    is.null(center),
+    centering(), ## default centering method
+    ifelse(
+      is.logical(center),
+      centering(),
+      center
+    )
+  )
+  fPCA_model$CENTER <- ifelse(
+    is.null(center),
+    TRUE, ## fPCA defaults center to TRUE
+    ifelse(is.logical(center),
+      center,
+      TRUE
+    )
+  )
   fPCA_model$solver <- solver
   ## return wrapped model
   return(fPCA_pro(
