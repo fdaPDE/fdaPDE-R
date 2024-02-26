@@ -5,9 +5,12 @@
 ##      - formula parser and check that everything has been passed available
 ## ???? does the penalty need any sanity check?
 ## TODO fdaPDE_Regression_Model: possible fault when passing smoother_params
-##                               if the user does not use the function SmootherName_params
-##                               the parameters are not checked and passed directly to
-##                               the constructor
+##                               if the user does not use the function
+##                               SmootherName_params the parameters are not
+##                               checked and passed directly to the constructor
+## TODO: add sanity checks on objects provided to the fit method,
+##       now they are assumed to be generated using the suitable
+##       formatted_lists functions.
 
 ## fdaPDE_Regression_Model models ----
 
@@ -25,6 +28,8 @@ fdaPDE_Regression_Model <- R6::R6Class(
     covariates = NULL
   ),
   private = list(
+    ## smoother_init_list
+    smoother_init_list = NULL,
     ## calibrator instance
     cpp_calibrator = NULL,
     get_cpp_calibrator = function() {
@@ -47,10 +52,11 @@ fdaPDE_Regression_Model <- R6::R6Class(
     init_model_and_calibrator = function(smoother_init_list) {
       ## set problem specific sampling type
       smoother_init_list$sampling_type <- self$model_traits$sampling_type
+      private$smoother_init_list <- smoother_init_list
       ## init cpp_model & cpp_calibrator
       cpp_pair <- regression_models_factory(
         self$domain,
-        smoother_init_list
+        private$smoother_init_list
       )
       ## store cpp_model & cpp_calibrator
       super$cpp_model <- cpp_pair$cpp_model
@@ -125,11 +131,16 @@ SRPDE_Model <- R6::R6Class(
       self$results <- list()
       ## calibrator update
       if (!is.null(calibrator)) {
+        super$smoother_init_list$calibrator <- calibrator ## to keep the init list updated
         super$cpp_calibrator <- calibrators_factory(calibrator)
+      }
+      ## lambda update
+      if (!is.null(lambda)) {
+        super$smoother_init_list$lambda <- lambda ## to keep the init list updated
       }
       ## calibration
       super$display("- Calibrating the model")
-      super$calibrate(lambda)
+      super$calibrate(super$smoother_init_list$lambda)
       ## fit
       super$display("- Fitting the model")
       super$fit()
