@@ -32,10 +32,10 @@ functions_space <- function(domain, order, basis) {
 # penalty ----
 
 ## callable simple lapalcian pde
-simple_laplacian_pde_callable <- function(domain, pde_parameters) {
+simple_laplacian_pde_callable <- function(domain, parameters) {
   ## unpack parameters
-  order <- pde_parameters$order
-  basis <- pde_parameters$basis
+  order <- parameters$order
+  basis <- parameters$basis
   ## generate the functions space
   functions_space_result <- functions_space(domain, order, basis)
   f <- functions_space_result$f
@@ -51,13 +51,13 @@ simple_laplacian_pde_callable <- function(domain, pde_parameters) {
 ## simple laplacian penalty user interface
 ## it wraps together:
 ## - simple_laplacian_pde_callable
-## - pde_parameters
+## - parameters
 ## this object is meant to contain all the information necessary to define
 ## a proper pde object once the actual domain is provided
 simple_laplacian_penalty <- function(order = 1, basis = c("FEM")) {
   penalty <- list(
     pde_callable = simple_laplacian_pde_callable,
-    pde_parameters = list(
+    parameters = list(
       order = order,
       basis = match.arg(basis)
     )

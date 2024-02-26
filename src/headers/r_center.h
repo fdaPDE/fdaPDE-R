@@ -45,7 +45,6 @@ class R_CENTER {
 private:
     RegressionView<void> smoother_view_;
     Calibrator<RegressionView<void>> calibrator_;
-    std::vector<DVector<double>> lambda_grid_;
     DMatrix<double> X_;
     DMatrix<double> w_;
     bool weighted_ = FALSE;
@@ -61,15 +60,6 @@ public:
     void set_weights(const DVector<double>& w) {
       w_ = w;
       weighted_ = TRUE;
-    }
-    void set_lambda( Rcpp::List R_lambda){
-      Rcpp::NumericVector lambda_D_grid = R_lambda["space"];
-        // move Rcpp::NumericVector into something understandable by cpp layer
-        lambda_grid_.resize(lambda_D_grid.size());
-        for(std::size_t i = 0; i < lambda_grid_.size(); ++i){
-          lambda_grid_[i].resize(1);
-          lambda_grid_[i][0] = lambda_D_grid[i];
-        }
     }
     void set_smoother(Rcpp::XPtr<RegressionView<void>> smoother_view_ptr){
       smoother_view_ = *smoother_view_ptr.get();

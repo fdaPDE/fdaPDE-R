@@ -22,7 +22,7 @@
 using cpp_srpde = R_SRPDE;
 RCPP_MODULE(cpp_srpde) {
     Rcpp::class_<R_SRPDE>("cpp_srpde") 
-      .constructor<Rcpp::Environment, int>() 
+      .constructor<Rcpp::Environment, int, Rcpp::List>() 
       .method("get_view"               , &R_SRPDE::get_view               )
       .method("get_gcv"                , &R_SRPDE::get_gcv                )
       .method("f"                      , &R_SRPDE::f                      )

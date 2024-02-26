@@ -29,7 +29,6 @@ RCPP_MODULE(cpp_center) {
       .method("mean",            &R_CENTER::mean            ) 
       .method("set_data",        &R_CENTER::set_data        )
       .method("set_weights",     &R_CENTER::set_weights     )
-      .method("set_lambda",      &R_CENTER::set_lambda      )
       .method("set_smoother",    &R_CENTER::set_smoother    )
       .method("set_calibrator",  &R_CENTER::set_calibrator  )
       .method("init",            &R_CENTER::init            )

@@ -71,9 +71,7 @@ class R_OFF{
             DVector<double> lambda(2);
             lambda[0] = Rcpp::as<double>(R_lambda["space"]);
             lambda[1] = Rcpp::as<double>(R_lambda["time"]);
-            std::vector<DVector<double>> lambda_grid(1);
-            lambda_grid[0] = lambda;
-            configured_calibrator_ = Calibrator<RegressionView<void>>(calibrator_(lambda_grid));
+            configured_calibrator_ = Calibrator<RegressionView<void>>(calibrator_(lambda));
             return Rcpp::XPtr<Calibrator<RegressionView<void>>>(&configured_calibrator_);
         }
         // fit

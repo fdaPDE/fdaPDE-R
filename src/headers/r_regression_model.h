@@ -51,19 +51,23 @@ class R_SRPDE {
         GCV * gcv_ptr_ = nullptr;
     public:
         // constructor
-        R_SRPDE(Rcpp::Environment pde, int sampling_type) {
+        R_SRPDE(Rcpp::Environment pde, int sampling_type, const Rcpp::List & smoother_params) {
             // recover pointer to penalty
             SEXP pdeptr = pde[".pointer"];
             PDEWrapper* ptr = reinterpret_cast<PDEWrapper*>(R_ExternalPtrAddr(pdeptr));
             // set model instance
             model_ = SRPDE(ptr->get_pde(), Sampling(sampling_type));
+            // smoother customization
+            // ... SRPDE does not have any smoother parameter yet
+            // create a model view
             model_view_ = RegressionView<void>(model_);
             // set up pointer to gcv functor
             gcv_ptr_ = new GCV(model_);   
         }
         // setters
-        void set_lambda(double lambda_D) {
-            model_.set_lambda_D(lambda_D);
+        void set_lambda(Rcpp::List lambda) {
+            model_.set_lambda_D(lambda["space"]);
+            // model_.set_lambda_T(lambda["time"]);
         }
         void set_spatial_locations(const DMatrix<double>& locs) { model_.set_spatial_locations(locs); }
         void set_observations(const DMatrix<double>& y) { data_.template insert<double>(OBSERVATIONS_BLK, y); }
