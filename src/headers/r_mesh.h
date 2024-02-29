@@ -18,9 +18,9 @@
 #define __R_MESH_H__
 
 #include <fdaPDE/finite_elements.h>
-#include <fdaPDE/mesh.h>
+#include <fdaPDE/geometry.h>
 #include <fdaPDE/utils/symbols.h>
-using fdapde::core::ADT;
+using fdapde::core::TreeSearch;
 using fdapde::core::Mesh;
 using fdapde::core::neighboring_structure;
 

@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef __R_FPCA_H__
-#define __R_FPCA_H__
+#ifndef __R_FPLS_H__
+#define __R_FPLS_H__
 
 // we only include RcppEigen.h which pulls Rcpp.h in for us
 #include <RcppEigen.h>
@@ -31,8 +31,8 @@ using fdapde::models::SpaceTimeSeparable;
 #include "r_pde.h"
 
 // fpca
-#include <fdaPDE/models/functional/fpca.h>
-using fdapde::models::FPCA;
+#include <fdaPDE/models/functional/fpls.h>
+using fdapde::models::FPLS;
 
 // rsvd
 #include <fdaPDE/models/functional/regularized_svd.h>
@@ -40,24 +40,26 @@ using fdapde::models::FPCA;
 using fdapde::models::RSVDType;
 
 // generic fPCA model wrapper signature
-template<typename RegularizationType> class R_FPCA {
+template<typename RegularizationType> class R_FPLS {
   public:
-    using ModelType = std::decay_t<FPCA<RegularizationType>>;
+    using ModelType = std::decay_t<FPLS<RegularizationType>>;
     using SolverType = RSVDType<ModelType>;
     // constructor
-    R_FPCA() : calibration_strategy_(Calibration::off) {}
+    R_FPLS() : calibration_strategy_(Calibration::off) {}
     // getters
-    DMatrix<double> scores() const { return model_.scores(); }
-    DMatrix<double> loadings() const { return model_.loadings(); }
     const SpMatrix<double>&  Psi() const { return model_.Psi(); }
+    DMatrix<double> B(){ return model_.B(); }
+    DMatrix<double> fitted(){ return model_.fitted(); }
+    DMatrix<double> reconstructed(){ return model_.reconstructed(); }
     // setters
     void set_data(const Rcpp::List & data) {
-      BlockFrame<double, int> X;
-      X.template insert<double>(OBSERVATIONS_BLK, Rcpp::as<DMatrix<double>>(data["X"]));
-      model_.set_data(X);
+      BlockFrame<double, int> df;
+      df.template insert<double>(OBSERVATIONS_BLK, Rcpp::as<DMatrix<double>>(data["Y"]));
+      df.template insert<double>(DESIGN_MATRIX_BLK, Rcpp::as<DMatrix<double>>(data["X"]));
+      model_.set_data(df);
     }
     void set_spatial_locations(const DMatrix<double>& locs) { model_.set_spatial_locations(locs); }
-    void set_npc(std::size_t n_pc) { model_.set_npc(n_pc); }
+    void set_ncomp(std::size_t n_comp) { model_.set_ncomp(n_comp); }
     void set_lambda(Rcpp::List R_lambda){
       // parse the R input
       Rcpp::NumericVector lambda_D_grid = R_lambda["space"];
@@ -70,9 +72,9 @@ template<typename RegularizationType> class R_FPCA {
         // lambda_grid_[i][1] = lambda_T_grid[i];
       }
     }
-    void set_solver(int policy, Rcpp::List solver_params, int calibration_strategy, Rcpp::List calibrator_params) {
-      solver_ = R_RSVD<ModelType>(RSVDSolutionPolicy(policy), solver_params, Calibration(calibration_strategy), calibrator_params);
-      calibration_strategy_ = solver_.calibration();
+    void set_rsvd(int policy, Rcpp::List rsvd_params, int calibration_strategy, Rcpp::List calibrator_params) {
+      rsvd_ = R_RSVD<ModelType>(RSVDSolutionPolicy(policy), rsvd_params, Calibration(calibration_strategy), calibrator_params);
+      calibration_strategy_ = rsvd_.calibration();
     }
     // utilities
     void init() { 
@@ -82,24 +84,24 @@ template<typename RegularizationType> class R_FPCA {
     void solve() { model_.solve(); }
   protected:
     ModelType model_;
-    R_RSVD<ModelType> solver_;
+    R_RSVD<ModelType> rsvd_;
     Calibration calibration_strategy_;
     std::vector<DVector<double>> lambda_grid_;
     // utilities
     void load_solver() {
       if(calibration_strategy_ == Calibration::off){
-        model_.set_solver(solver_());
+        model_.set_rsvd(rsvd_());
         model_.set_lambda_D(lambda_grid_.front()[0]);
       } else {
-        model_.set_solver(solver_(lambda_grid_));
+        model_.set_rsvd(rsvd_(lambda_grid_));
       }
     }
 };
 
 // implementation of the fPCA model wrapper for SpaceOnly regulatization
-class R_FPCA_SpaceOnly : public R_FPCA<SpaceOnly> {
+class R_FPLS_SpaceOnly : public R_FPLS<SpaceOnly> {
   public:
-    R_FPCA_SpaceOnly(Rcpp::Environment pde,
+    R_FPLS_SpaceOnly(Rcpp::Environment pde,
                      int sampling_type,
                      Rcpp::List fPCA_params) {
         // recover pointer to penalty
@@ -108,28 +110,8 @@ class R_FPCA_SpaceOnly : public R_FPCA<SpaceOnly> {
         // set model instance
         model_ = ModelType(ptr->get_pde(), Sampling(sampling_type));
         // model configuration
-        model_.set_npc(fPCA_params["n_pc"]);
+        model_.set_ncomp(fPCA_params["n_comp"]);
     }
 };
 
-// implementation of the fPCA model wrapper for SpaceOnly regulatization
-class R_FPCA_SpaceTimeSeparable : public R_FPCA<SpaceTimeSeparable> {
-  public:
-    R_FPCA_SpaceTimeSeparable(Rcpp::Environment pde_space,
-                              Rcpp::Environment pde_time,
-                              int sampling_type,
-                              Rcpp::List fPCA_params) {
-        // recover pointer to space penalty
-        SEXP pde_space_ptr = pde_space[".pointer"];
-        PDEWrapper* space_ptr = reinterpret_cast<PDEWrapper*>(R_ExternalPtrAddr(pde_space_ptr));
-        // recover pointer to time penalty
-        SEXP pde_time_ptr = pde_time[".pointer"];
-        PDEWrapper* time_ptr = reinterpret_cast<PDEWrapper*>(R_ExternalPtrAddr(pde_time_ptr));
-        // set model instance
-        model_ = ModelType(space_ptr->get_pde(), time_ptr->get_pde(), Sampling(sampling_type));
-        // model configuration
-        model_.set_npc(fPCA_params["n_pc"]);
-    }
-};
-
-#endif // __R_FPCA_H__
+#endif // __R_FPLS_H__

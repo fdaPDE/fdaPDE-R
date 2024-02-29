@@ -35,10 +35,6 @@ using fdapde::models::SRPDE;
 using fdapde::models::STRPDE;
 using fdapde::models::GSRPDE;
 
-// calibration
-#include <fdaPDE/models/regression/gcv.h>
-using fdapde::models::GCV;
-
 // implementation of the wrapper for SRPDE regression model
 class R_SRPDE {
     private:
@@ -48,7 +44,6 @@ class R_SRPDE {
         BlockFrame<double, int> data_;
         // calibration utilities
         RegressionView<void> model_view_;
-        GCV * gcv_ptr_ = nullptr;
     public:
         // constructor
         R_SRPDE(Rcpp::Environment pde, int sampling_type, const Rcpp::List & smoother_params) {
@@ -60,9 +55,7 @@ class R_SRPDE {
             // smoother customization
             // ... SRPDE does not have any smoother parameter yet
             // create a model view
-            model_view_ = RegressionView<void>(model_);
-            // set up pointer to gcv functor
-            gcv_ptr_ = new GCV(model_);   
+            model_view_ = model_;
         }
         // setters
         void set_lambda(Rcpp::List lambda) {
@@ -74,7 +67,6 @@ class R_SRPDE {
         void set_covariates(const DMatrix<double>& X) { data_.template insert<double>(DESIGN_MATRIX_BLK, X); }
         // getters
         Rcpp::XPtr<RegressionView<void>> get_view() { return Rcpp::XPtr<RegressionView<void>>(&model_view_); }
-        Rcpp::XPtr<GCV> get_gcv() { return Rcpp::XPtr<GCV>(gcv_ptr_); }
         const DVector<double>& f() const { return model_.f(); }
         const DVector<double>& beta() const { return model_.beta(); }
         // utilities
@@ -83,10 +75,6 @@ class R_SRPDE {
             model_.init();
         }
         void solve() { model_.solve(); }
-        ~R_SRPDE(){
-          if(gcv_ptr_)
-            delete gcv_ptr_;
-        }
 };
 
 #endif // __R_REGRESSION_MODEL_H__

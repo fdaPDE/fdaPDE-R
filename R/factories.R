@@ -87,9 +87,6 @@ functional_models_factory <- function(domain, fm_init_list) {
   ## model initialization
   functional_model <- switch(fm_init_list$name,
     "fPCA" = {
-      ## calibrator recasting
-      calibrator <- fm_init_list$solver$calibrator
-      calibrator$calibration_strategy <- Calibration(calibrator$name)
       ## model initialization
       switch(fm_init_list$regularization_type,
         "SpaceOnly" = {
@@ -104,9 +101,32 @@ functional_models_factory <- function(domain, fm_init_list) {
           cpp_fPCA$set_solver(
             SolutionPolicy(fm_init_list$solver$policy),
             fm_init_list$solver$parameters,
-            calibrator
+            Calibration(fm_init_list$solver$calibrator$name),
+            fm_init_list$solver$calibrator$parameters
           )
           return(cpp_fPCA)
+        }
+      )
+    },
+    "fPLS" = {
+      ## model initialization
+      switch(fm_init_list$regularization_type,
+        "SpaceOnly" = {
+          ## statistical model initialization
+          cpp_fPLS <- new(
+            cpp_fpls_spaceonly,
+            pde,
+            Sampling(fm_init_list$sampling_type),
+            fm_init_list$parameters
+          )
+          ## set solver module
+          cpp_fPLS$set_rsvd(
+            SolutionPolicy(fm_init_list$rsvd$policy),
+            fm_init_list$rsvd$parameters,
+            Calibration(fm_init_list$rsvd$calibrator$name),
+            fm_init_list$rsvd$calibrator$parameters
+          )
+          return(cpp_fPLS)
         }
       )
     }

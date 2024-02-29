@@ -28,9 +28,12 @@ fdaPDE_Base_Model <- R6::R6Class(
   ),
   private = list(
     ## model instance
-    cpp_model = NULL,
+    cpp_model = 5,
     get_cpp_model = function() {
-      return(cpp_model)
+      return(private$cpp_model)
+    },
+    Psi = function() {
+      return(private$cpp_model$Psi())
     },
     ## setters
     set_verbosity = function(VERBOSE = FALSE) {

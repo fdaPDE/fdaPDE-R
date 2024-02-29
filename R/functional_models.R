@@ -167,7 +167,16 @@ fdaPDE_Functional_Model <- R6::R6Class(
     ## regression data
     data = list(),
     ## options
-    CENTER = NULL
+    CENTER = NULL,
+    Psi = function() {
+      return(super$cpp_model$Psi())
+    },
+    evaluate = function(f) {
+      return(self$Psi() %*% f)
+    },
+    fitted_loadings = function() {
+      return(self$evaluate(self$results$loadings))
+    }
   ),
   private = list(
     ## functional_model_init_list
@@ -231,8 +240,8 @@ fdaPDE_Functional_Model <- R6::R6Class(
       ## Y center (if any)
       if ("Y" %in% names(self$data)) {
         scale_result <- scale(self$data$Y, center = TRUE, scale = FALSE)
+        self$results$Y_mean <- as.matrix(colMeans(self$data$Y))
         self$data$Y <- as.matrix(scale_result)
-        self$results$Y_mean <- as.matrix(scale_result:center)
       }
     },
     ## fit utils
@@ -241,7 +250,7 @@ fdaPDE_Functional_Model <- R6::R6Class(
       super$cpp_model$init()
       super$cpp_model$solve()
     },
-    ## cpp_model interfaces
+    ## fPCA cpp_model interfaces
     set_lambda = function(lambda) {
       super$cpp_model$set_lambda(lambda)
     },
@@ -250,6 +259,16 @@ fdaPDE_Functional_Model <- R6::R6Class(
     },
     get_loadings = function() {
       return(as.matrix(super$cpp_model$loadings()))
+    },
+    ## fPLS cpp_model interfaces
+    fitted = function() {
+      return(as.matrix(super$cpp_model$fitted()))
+    },
+    reconstructed = function() {
+      return(as.matrix(super$cpp_model$reconstructed()))
+    },
+    B = function() {
+      return(as.matrix(super$cpp_model$B()))
     }
   )
 )
@@ -276,7 +295,7 @@ fPCA_class <- R6::R6Class(
       if (self$CENTER) {
         super$display("- Centering device initialization")
         super$display("\n\n%% Start centering sub-task %%")
-        super$init_centering(fPCA_model$center)
+        super$init_centering(super$functional_model$center)
         super$center()
         super$display("\n\n%% End centering sub-task %%\n\n")
       }
@@ -331,15 +350,11 @@ fPCA <- function(data,
   ## while providing a clear interface to the final user
   fPCA_model <- fPCA_init()
   fPCA_model$penalty <- penalty
-  fPCA_model$center <- ifelse(
-    is.null(center),
-    centering(), ## default centering method
-    ifelse(
-      is.logical(center),
-      centering(),
-      center
-    )
-  )
+  if(is.null(center) || is.logical(center)){
+    fPCA_model$center <- centering()
+  } else {
+    fPCA_model$center <- center
+  }
   fPCA_model$CENTER <- ifelse(
     is.null(center),
     TRUE, ## fPCA defaults center to TRUE
@@ -353,6 +368,108 @@ fPCA <- function(data,
   return(fPCA_pro(
     data = data,
     fPCA_model = fPCA_model,
+    VERBOSE = VERBOSE
+  ))
+}
+
+
+### fPLS -----
+
+
+fPLS_class <- R6::R6Class(
+  classname = "fPLS",
+  inherit = fdaPDE_Functional_Model,
+  public = list(
+    ## constructor
+    initialize = function(data, fPLS_model, VERBOSE) {
+      ## save options
+      super$set_verbosity(VERBOSE)
+      self$CENTER <- fPLS_model$CENTER
+      super$display("\n\nfPLS model")
+      ## save fPCA_model
+      super$functional_model <- fPLS_model
+      ## inputs sanity check
+      super$display("- Inputs sanity check")
+      smoother_params <- super$sanity_check_data(data)
+      ## centering device initialization
+      if (self$CENTER) {
+        super$display("- Centering device initialization")
+        super$display("\n\n%% Start centering sub-task %%")
+        super$init_centering(super$functional_model$center)
+        super$center()
+        super$display("\n\n%% End centering sub-task %%\n\n")
+      }
+      ## model initialization
+      super$display("- Model initialization")
+      super$init_model(fPLS_model)
+    },
+    ## utils
+    fit = function(lambda = NULL, solver = NULL) {
+      ## calibrator update
+      if (!is.null(solver)) {
+        super$display("- Set new Solver")
+        super$cpp_model$set_solver(solver)
+      }
+      ## set lambda
+      if (!is.null(lambda)) {
+        super$functional_model$solver$lambda <- lambda
+      }
+      ## fit
+      super$display("- Fit")
+      super$set_lambda(super$functional_model$solver$lambda)
+      super$fit()
+      ## save results
+      super$display("- Save results")
+      self$results$B_hat <- super$B()
+      n_stat_units <- nrow(self$data$X)
+      self$results$Y_hat <- super$fitted() + rep(1, n_stat_units) %*% t(self$results$Y_mean)
+      self$results$X_hat <- super$reconstructed() + rep(1, n_stat_units) %*% t(self$results$X_mean)
+    }
+  )
+)
+
+fPLS_pro <- function(data,
+                     fPLS_model = fPLS_init(),
+                     VERBOSE = TRUE) {
+  model <- fPLS_class$new(
+    data = data,
+    fPLS_model = fPLS_model,
+    VERBOSE = VERBOSE
+  )
+  return(model)
+}
+
+#' @export
+fPLS <- function(data,
+                 penalty = simple_laplacian_penalty(),
+                 center = centering(),
+                 solver = sequential(),
+                 smoother = smoothing(),
+                 VERBOSE = TRUE) {
+  ## overwriting smoother defaults with the required ones
+  ## necessary to guarantee the consistency with the other statistical models
+  ## while providing a clear interface to the final user
+  fPLS_model <- fPLS_init()
+  fPLS_model$penalty <- penalty
+  if(is.null(center) || is.logical(center)){
+    fPLS_model$center <- centering()
+  } else {
+    fPLS_model$center <- center
+  }
+  fPLS_model$CENTER <- ifelse(
+    is.null(center),
+    TRUE, ## fPCA defaults center to TRUE
+    ifelse(is.logical(center),
+      center,
+      TRUE
+    )
+  )
+  fPLS_model$rsvd <- solver
+  fPLS_model$smoother <- smoother
+  ## return wrapped model
+  return(fPLS_pro(
+    data = data,
+    fPLS_model = fPLS_model,
     VERBOSE = VERBOSE
   ))
 }

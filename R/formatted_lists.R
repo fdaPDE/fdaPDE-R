@@ -88,8 +88,22 @@ functional_data <- function(domain, X,
     type = "functional_data",
     domain = domain,
     locations = locations,
+    Y = Y,
     X = X,
     w = w
+  )
+  return(data)
+}
+
+#' @export
+functional_regression_data <- function(domain, Y, X,
+                                       locations = NULL) {
+  data <- list(
+    type = "functional_data",
+    domain = domain,
+    locations = locations,
+    Y = Y,
+    X = X
   )
   return(data)
 }
@@ -142,7 +156,7 @@ gcv <- function(optimizer = c("grid"),
 kcv <- function(n_folds = 10, shuffle = TRUE, seed = NULL) {
   ## calibration strategy specific parameters
   kcv_params <- list(
-    K = n_folds,
+    n_folds = n_folds,
     shuffle = shuffle,
     seed = seed
   )
@@ -339,6 +353,11 @@ fPCA_init <- function(penalty = simple_laplacian_penalty(),
                       center = NULL, ## also defaults centering lambda
                       solver = sequential(), ## also defaults solver's lambda
                       ...) {
+  if(is.null(center) || is.logical(center)){
+    center_parsed <- centering()
+  } else {
+    center_parsed <- center
+  }
   fPCA_init_list <- list(
     name = "fPCA",
     ## regularization
@@ -346,15 +365,7 @@ fPCA_init <- function(penalty = simple_laplacian_penalty(),
     regularization_type = match.arg(regularization_type),
     sampling_type = match.arg(sampling_type),
     ## centering
-    center = ifelse(
-      is.null(center),
-      centering(), ## default centering method
-      ifelse(
-        is.logical(center),
-        centering(), ## if a logic value was provided it sets the default centering device
-        center ## if a centering device was provided it uses that
-      )
-    ),
+    center = center_parsed,
     ## analsysis
     solver = solver,
     ## method parameters
@@ -396,22 +407,19 @@ fPLS_init <- function(penalty = simple_laplacian_penalty(),
                       smoother = smoothing(), ## also defaults regression step's lambda
                       CENTER = NULL,
                       ...) {
+  if(is.null(center) || is.logical(center)){
+    center_parsed <- centering()
+  } else {
+    center_parsed <- center
+  }
   fPLS_init_list <- list(
-    name = "fPCA",
+    name = "fPLS",
     ## regularization
     penalty = penalty,
     regularization_type = match.arg(regularization_type),
     sampling_type = match.arg(sampling_type),
     ## centering
-    center = ifelse(
-      is.null(center),
-      centering(), ## default centering method
-      ifelse(
-        is.logical(center),
-        centering(),
-        center
-      )
-    ),
+    center = center_parsed,
     ## analysis
     rsvd = rsvd,
     smoother = smoother,
@@ -427,7 +435,7 @@ fPLS_init <- function(penalty = simple_laplacian_penalty(),
       )
     )
   )
-  return(fPCA_init_list)
+  return(fPLS_init_list)
 }
 
 

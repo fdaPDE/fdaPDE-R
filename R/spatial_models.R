@@ -78,13 +78,8 @@ fdaPDE_Regression_Model <- R6::R6Class(
       super$cpp_model$init()
       ## calibration
       private$cpp_calibrator$configure_calibrator(lambda)
-      if (private$cpp_calibrator$get_calibration_strategy() != Calibration("gcv")) {
-        lambda_cpp <- private$cpp_calibrator$fit(super$cpp_model$get_view())
-        lambda_opt <- hyperparameters(lambda_cpp[1], lambda_cpp[2])
-      } else {
-        stop("gcv calibrator is not supported yet")
-        # lambda_opt <- private$cpp_calibrator$fit(super$cpp_model$get_gcv())
-      }
+      lambda_cpp <- private$cpp_calibrator$fit(super$cpp_model$get_view())
+      lambda_opt <- hyperparameters(lambda_cpp[1], lambda_cpp[2])
       ## statistical model preparation
       private$set_lambda(lambda_opt)
       ## save calibrator's results

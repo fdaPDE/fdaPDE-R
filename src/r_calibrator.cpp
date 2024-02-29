@@ -19,39 +19,54 @@
 #include "headers/r_calibrator.h"
 
 // Rcpp modules definition
- 
-using cpp_off = R_OFF; 
-RCPP_MODULE(cpp_off) { 
+
+using cpp_off_base = R_CALIBRATOR<fdapde::calibration::Off>;
+using cpp_off = R_OFF;
+RCPP_MODULE(cpp_off) {
+    // inherited methods
+    Rcpp::class_<cpp_off_base>("cpp_off_base")
+      .method("get_calibration_strategy",   &cpp_off_base::get_calibration_strategy      )
+      .method("optimum",                    &cpp_off_base::optimum                       );
+    // specific methods
     Rcpp::class_<R_OFF>("cpp_off")
+      .derives<cpp_off_base>("cpp_off_base")
       .constructor<Rcpp::List>() 
-      .method("get_calibration_strategy",   &R_OFF::get_calibration_strategy      )
       .method("configure_calibrator",       &R_OFF::configure_calibrator          )
-      .method("optimum",                    &R_OFF::optimum                       )
       .method("fit",                        &R_OFF::fit                           );    
 }
- 
-// using cpp_gcv = R_GCV; 
-// RCPP_MODULE(cpp_gcv) { 
-//     Rcpp::class_<R_GCV>("cpp_gcv")
-//       .constructor<Rcpp::List>()
-//       .method("get_calibration_strategy",   &R_GCV::get_calibration_strategy      )
-//       .method("configure_calibrator",       &R_GCV::configure_calibrator          )
-//       .method("optimum",                    &R_GCV::optimum                       )
-//       .method("fit",                        &R_GCV::fit                           )
-//       .method("gcvs",                       &R_GCV::gcvs                          ) 
-//       .method("edfs",                       &R_GCV::edfs                          );
-// }
 
+using cpp_gcv_base = R_CALIBRATOR<fdapde::calibration::GCV<void>>;
+using cpp_gcv = R_GCV; 
+RCPP_MODULE(cpp_gcv) { 
+    // inherited methods
+    Rcpp::class_<cpp_gcv_base>("cpp_gcv_base")
+      .method("get_calibration_strategy",   &cpp_gcv_base::get_calibration_strategy      )
+      .method("optimum",                    &cpp_gcv_base::optimum                       );
+    // specific methods
+    Rcpp::class_<R_GCV>("cpp_gcv")
+      .derives<cpp_gcv_base>("cpp_gcv_base")
+      .constructor<Rcpp::List>()
+      .method("configure_calibrator",       &R_GCV::configure_calibrator          )
+      .method("fit",                        &R_GCV::fit                           )
+      .method("gcvs",                       &R_GCV::gcvs                          ) 
+      .method("edfs",                       &R_GCV::edfs                          );
+}
+
+using cpp_kcv_base = R_CALIBRATOR<fdapde::calibration::KCV>;
 using cpp_kcv = R_KCV;
 RCPP_MODULE(cpp_kcv) {
+    // inherited methods
+    Rcpp::class_<cpp_kcv_base>("cpp_kcv_base")
+      .method("get_calibration_strategy",   &cpp_kcv_base::get_calibration_strategy      )
+      .method("optimum",                    &cpp_kcv_base::optimum                       );
+    // specific methods
     Rcpp::class_<R_KCV>("cpp_kcv")
+      .derives<cpp_kcv_base>("cpp_kcv_base")
       .constructor<Rcpp::List>()
-      .method("get_calibration_strategy",   &R_KCV::get_calibration_strategy      )
       .method("configure_calibrator",       &R_KCV::configure_calibrator          )
       .method("fit",                        &R_KCV::fit                           )
       .method("avg_scores",                 &R_KCV::avg_scores                    )
       .method("std_scores",                 &R_KCV::std_scores                    )
       .method("scores",                     &R_KCV::scores                        )
-      .method("optimum",                    &R_KCV::optimum                       )
       .method("set_n_folds",                &R_KCV::set_n_folds                   ); 
 }

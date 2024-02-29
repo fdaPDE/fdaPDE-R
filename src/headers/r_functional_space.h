@@ -23,7 +23,7 @@
 
 #include <fdaPDE/utils.h>
 #include <fdaPDE/finite_elements.h>
-#include <fdaPDE/mesh.h>
+#include <fdaPDE/geometry.h>
 #include "r_mesh.h"
 using fdapde::core::Mesh;
 using fdapde::core::Integrator;

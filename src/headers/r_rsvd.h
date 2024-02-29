@@ -45,17 +45,19 @@ class R_RSVD {
     RSVDSolutionPolicy policy_;
   public:
     R_RSVD() : policy_(RSVDSolutionPolicy::sequential) {}
-    R_RSVD(RSVDSolutionPolicy policy, Rcpp::List sequential_params, Rcpp::List calibrator_params) : policy_(policy) {
+    R_RSVD(RSVDSolutionPolicy policy, Rcpp::List sequential_params, Calibration calibration_strategy, Rcpp::List calibrator_params) : policy_(policy) {
       if (policy_ == RSVDSolutionPolicy::sequential) {
         // rsvd and calibrator initialization
-        Calibration calibration_strategy = Calibration(static_cast<int>(calibrator_params["calibration_strategy"]));
         rsvd_sequential_ = RegularizedSVD<fdapde::sequential>{calibration_strategy};
-        if(calibration_strategy == Calibration::kcv)
+        if(calibration_strategy == Calibration::kcv){
           rsvd_sequential_.set_nfolds(calibrator_params["n_folds"]);
+        }
+        if(calibration_strategy != Calibration::off ){
+          if(calibrator_params["seed"] != R_NilValue) rsvd_sequential_.set_seed(calibrator_params["seed"]);
+        }
         // rsvd configuration
         rsvd_sequential_.set_tolerance(Rcpp::as<double>(sequential_params["tolerance"]));
         rsvd_sequential_.set_max_iter(sequential_params["max_iter"]);
-        if(sequential_params["seed"] != R_NilValue) rsvd_sequential_.set_seed(sequential_params["seed"]);
         type_erased_rsvd_ = RSVDType<ModelType>(rsvd_sequential_);
       } else {
         type_erased_rsvd_ = RSVDType<ModelType>(rsvd_monolithic_);
