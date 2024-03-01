@@ -31,11 +31,16 @@ RCPP_MODULE(cpp_fpls_spaceonly) {
       .method("set_spatial_locations",    &cpp_fpls_spaceonly_base::set_spatial_locations  )
       .method("set_ncomp",                &cpp_fpls_spaceonly_base::set_ncomp              )
       .method("set_lambda",               &cpp_fpls_spaceonly_base::set_lambda             )
-      .method("set_rsvd",                 &cpp_fpls_spaceonly_base::set_rsvd               )
+      .method("set_solver",               &cpp_fpls_spaceonly_base::set_solver             )
       // getters
       .method("B",                        &cpp_fpls_spaceonly_base::B                      )
       .method("fitted",                   &cpp_fpls_spaceonly_base::fitted                 )
       .method("reconstructed",            &cpp_fpls_spaceonly_base::reconstructed          )
+      .method("Y_space_directions",       &cpp_fpls_spaceonly_base::Y_space_directions     )
+      .method("Y_loadings",               &cpp_fpls_spaceonly_base::Y_loadings             )
+      .method("X_space_directions",       &cpp_fpls_spaceonly_base::X_space_directions     )
+      .method("X_loadings",               &cpp_fpls_spaceonly_base::X_loadings             )
+      .method("X_latent_scores",          &cpp_fpls_spaceonly_base::X_latent_scores        )
       // utilities
       .method("init",                     &cpp_fpls_spaceonly_base::init                   )
       .method("solve",                    &cpp_fpls_spaceonly_base::solve                  );

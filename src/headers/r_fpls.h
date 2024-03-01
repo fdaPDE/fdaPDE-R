@@ -51,6 +51,11 @@ template<typename RegularizationType> class R_FPLS {
     DMatrix<double> B(){ return model_.B(); }
     DMatrix<double> fitted(){ return model_.fitted(); }
     DMatrix<double> reconstructed(){ return model_.reconstructed(); }
+    DMatrix<double> Y_space_directions(){ return model_.Y_space_directions(); }
+    DMatrix<double> Y_loadings(){ return model_.Y_loadings(); }
+    DMatrix<double> X_space_directions(){ return model_.X_space_directions(); }
+    DMatrix<double> X_loadings(){ return model_.X_loadings(); }
+    DMatrix<double> X_latent_scores(){ return model_.X_latent_scores(); }
     // setters
     void set_data(const Rcpp::List & data) {
       BlockFrame<double, int> df;
@@ -72,9 +77,11 @@ template<typename RegularizationType> class R_FPLS {
         // lambda_grid_[i][1] = lambda_T_grid[i];
       }
     }
-    void set_rsvd(int policy, Rcpp::List rsvd_params, int calibration_strategy, Rcpp::List calibrator_params) {
+    void set_solver(int policy, Rcpp::List rsvd_params,
+                    int calibration_strategy, Rcpp::List calibrator_params, Rcpp::List lambda) {
       rsvd_ = R_RSVD<ModelType>(RSVDSolutionPolicy(policy), rsvd_params, Calibration(calibration_strategy), calibrator_params);
       calibration_strategy_ = rsvd_.calibration();
+      set_lambda(lambda);
     }
     // utilities
     void init() { 

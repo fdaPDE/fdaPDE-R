@@ -70,9 +70,11 @@ template<typename RegularizationType> class R_FPCA {
         // lambda_grid_[i][1] = lambda_T_grid[i];
       }
     }
-    void set_solver(int policy, Rcpp::List solver_params, int calibration_strategy, Rcpp::List calibrator_params) {
+    void set_solver(int policy, Rcpp::List solver_params,
+                    int calibration_strategy, Rcpp::List calibrator_params, Rcpp::List lambda) {
       solver_ = R_RSVD<ModelType>(RSVDSolutionPolicy(policy), solver_params, Calibration(calibration_strategy), calibrator_params);
       calibration_strategy_ = solver_.calibration();
+      set_lambda(lambda);
     }
     // utilities
     void init() { 

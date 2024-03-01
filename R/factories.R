@@ -6,39 +6,60 @@
 
 # calibrator_init_list
 # - name
+# - lambda
 # - parameters
 
 calibrators_factory <- function(calibrator_init_list) {
+  ## calibrator initialization
   calibrator <- switch(calibrator_init_list$name,
     "off" = {
-      new(cpp_off, calibrator_init_list$parameters)
+      new(
+        ## cpp module
+        cpp_off,
+        ## contructor's arguments
+        calibrator_init_list$parameters
+      )
     },
     "gcv" = {
-      new(cpp_gcv, calibrator_init_list$parameters)
+      new(
+        ## cpp module
+        cpp_gcv,
+        ## contructor's arguments
+        calibrator_init_list$parameters
+      )
     },
     "kcv" = {
-      new(cpp_kcv, calibrator_init_list$parameters)
+      new(
+        ## cpp module
+        cpp_kcv,
+        ## contructor's arguments
+        calibrator_init_list$parameters
+      )
     }
   )
+  ## calibrator configuration
+  calibrator$configure_calibrator(calibrator_init_list$lambda)
   return(calibrator)
 }
 
 # models ----
+
+# model_traits
+# - regularization_type
+# - sampling_type
 
 # smoother_init_list
 # - name
 # - penalty
 #   - pde_callable
 #   - parameters
-# - regularization_type
-# - sampling_type
 # - parameters
 # - calibrator
 #   - name
 #   - parameters
 # - lambda
 
-regression_models_factory <- function(domain, smoother_init_list) {
+regression_models_factory <- function(domain, model_traits, smoother_init_list) {
   ## pde initialization
   pde_callable <- smoother_init_list$penalty$pde_callable
   pde_parameters <- smoother_init_list$penalty$parameters
@@ -47,8 +68,16 @@ regression_models_factory <- function(domain, smoother_init_list) {
   cpp_pair <- switch(smoother_init_list$name,
     "SRPDE" = {
       list(
-        cpp_model = new(cpp_srpde, pde, Sampling(smoother_init_list$sampling_type), smoother_init_list$parameters),
-        cpp_calibrator = calibrators_factory(smoother_init_list$calibrator)
+        cpp_model = new(
+          ## cpp module
+          cpp_srpde, pde,
+          ## contructor's arguments
+          Sampling(model_traits$sampling_type),
+          smoother_init_list$parameters
+        ),
+        cpp_calibrator = calibrators_factory(
+          smoother_init_list$calibrator
+        )
       )
     }
   )
@@ -57,9 +86,9 @@ regression_models_factory <- function(domain, smoother_init_list) {
 
 # center_init_list = smoother_init_list
 
-centering_factory <- function(domain, center_init_list) {
+centering_factory <- function(domain, model_traits, center_init_list) {
   ## smoother & calibrator initialization
-  cpp_pair <- regression_models_factory(domain, center_init_list)
+  cpp_pair <- regression_models_factory(domain, model_traits, center_init_list)
   ## assembly
   cpp_touple <- list(
     cpp_model = new(cpp_center),
@@ -69,17 +98,19 @@ centering_factory <- function(domain, center_init_list) {
   return(cpp_touple)
 }
 
+# model_traits
+# - regularization_type
+# - sampling_type
+
 # functional_model_init_list
 # - name
 # - penalty
-# - regularization_type
-# - sampling_type
 # - center
-# - .... (depending on the specific funcitonal model)
+# - .... (depend on the specific funcitonal model)
 # - parameters
 # - CENTER
 
-functional_models_factory <- function(domain, fm_init_list) {
+functional_models_factory <- function(domain, model_traits, fm_init_list) {
   ## pde initialization
   pde_callable <- fm_init_list$penalty$pde_callable
   parameters <- fm_init_list$penalty$parameters
@@ -88,21 +119,15 @@ functional_models_factory <- function(domain, fm_init_list) {
   functional_model <- switch(fm_init_list$name,
     "fPCA" = {
       ## model initialization
-      switch(fm_init_list$regularization_type,
+      switch(model_traits$regularization_type,
         "SpaceOnly" = {
           ## statistical model initialization
           cpp_fPCA <- new(
             cpp_fpca_spaceonly,
+            ## contructor's arguments
             pde,
-            Sampling(fm_init_list$sampling_type),
+            Sampling(model_traits$sampling_type),
             fm_init_list$parameters
-          )
-          ## set solver module
-          cpp_fPCA$set_solver(
-            SolutionPolicy(fm_init_list$solver$policy),
-            fm_init_list$solver$parameters,
-            Calibration(fm_init_list$solver$calibrator$name),
-            fm_init_list$solver$calibrator$parameters
           )
           return(cpp_fPCA)
         }
@@ -110,21 +135,16 @@ functional_models_factory <- function(domain, fm_init_list) {
     },
     "fPLS" = {
       ## model initialization
-      switch(fm_init_list$regularization_type,
+      switch(model_traits$regularization_type,
         "SpaceOnly" = {
           ## statistical model initialization
           cpp_fPLS <- new(
+            ## cpp module
             cpp_fpls_spaceonly,
+            ## contructor's arguments
             pde,
-            Sampling(fm_init_list$sampling_type),
+            Sampling(model_traits$sampling_type),
             fm_init_list$parameters
-          )
-          ## set solver module
-          cpp_fPLS$set_rsvd(
-            SolutionPolicy(fm_init_list$rsvd$policy),
-            fm_init_list$rsvd$parameters,
-            Calibration(fm_init_list$rsvd$calibrator$name),
-            fm_init_list$rsvd$calibrator$parameters
           )
           return(cpp_fPLS)
         }

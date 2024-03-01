@@ -29,7 +29,13 @@ fdaPDE_Regression_Model <- R6::R6Class(
   ),
   private = list(
     ## smoother_init_list
-    smoother_init_list = NULL,
+    regression_model = NULL,
+    get_regression_model = function() {
+      return(private$regression_model)
+    },
+    set_regression_model = function(regression_model) {
+      private$regression_model <- regression_model
+    },
     ## calibrator instance
     cpp_calibrator = NULL,
     get_cpp_calibrator = function() {
@@ -50,13 +56,11 @@ fdaPDE_Regression_Model <- R6::R6Class(
       ## TODO: check coherence between observations and locations dimensions
     },
     init_model_and_calibrator = function(smoother_init_list) {
-      ## set problem specific sampling type
-      smoother_init_list$sampling_type <- self$model_traits$sampling_type
-      private$smoother_init_list <- smoother_init_list
       ## init cpp_model & cpp_calibrator
       cpp_pair <- regression_models_factory(
         self$domain,
-        private$smoother_init_list
+        self$model_traits,
+        smoother_init_list
       )
       ## store cpp_model & cpp_calibrator
       super$cpp_model <- cpp_pair$cpp_model
@@ -105,8 +109,8 @@ fdaPDE_Regression_Model <- R6::R6Class(
 
 ### SRPDE model implementation ----
 
-SRPDE_Model <- R6::R6Class(
-  classname = "SRPDE_Model",
+SRPDE_Class <- R6::R6Class(
+  classname = "SRPDE_Class",
   inherit = fdaPDE_Regression_Model,
   public = list(
     ## constructor
@@ -118,24 +122,31 @@ SRPDE_Model <- R6::R6Class(
       super$sanity_check_data(formula, data)
       ## model and calibrator initialization
       super$display("- Initializing the model and the calibrator")
-      super$init_model_and_calibrator(smoother)
+      super$set_regression_model(smoother)
+      super$init_model_and_calibrator(super$get_regression_model())
     },
     ## utils
-    fit = function(lambda = NULL, calibrator = NULL) {
+    fit = function(calibrator = NULL) {
+      regression_model <- super$get_regression_model()
       ## clear previous results
       self$results <- list()
       ## calibrator update
       if (!is.null(calibrator)) {
-        super$smoother_init_list$calibrator <- calibrator ## to keep the init list updated
-        super$cpp_calibrator <- calibrators_factory(calibrator)
+        regression_model$calibrator <- parse_calibrator(calibrator) ## to keep the init list updated
+        ## save updates
+        super$set_regression_model(regression_model)
+        ## initialize a new calibrator
+        super$cpp_calibrator <- calibrators_factory(super$get_regression_model()$calibrator)
       }
       ## lambda update
       if (!is.null(lambda)) {
-        super$smoother_init_list$lambda <- lambda ## to keep the init list updated
+        regression_model$calibrator$lambda <- lambda ## to keep the init list updated
+        ## save updates
+        super$set_regression_model(regression_model)
       }
       ## calibration
       super$display("- Calibrating the model")
-      super$calibrate(super$smoother_init_list$lambda)
+      super$calibrate(super$get_regression_model()$calibrator$lambda)
       ## fit
       super$display("- Fitting the model")
       super$fit()
@@ -151,7 +162,7 @@ SRPDE_Model <- R6::R6Class(
 SRPDE_pro <- function(formula = NULL, data,
                       smoother = smoothing(),
                       VERBOSE = FALSE) {
-  model <- SRPDE_Model$new(
+  model <- SRPDE_Class$new(
     formula = formula,
     data = data,
     smoother = smoother,
@@ -171,7 +182,7 @@ SRPDE <- function(formula = NULL, data,
   ## while providing a clear interface to the final user
   smoother <- smoothing()
   smoother$penalty <- penalty
-  smoother$calibrator <- calibrator
+  smoother$calibrator <- parse_calibrator(calibrator)
   smoother$smoother_params <- smoother_options
   ## return wrapped model
   return(SRPDE_pro(
@@ -188,12 +199,12 @@ SRPDE <- function(formula = NULL, data,
 #                    smoother_params = GSRPDE_params(),
 #                    calibrator = off(),
 #                    VERBOSE = FALSE) {
-#   model <- SRPDE_Model$new(
+#   model <- SRPDE_Class$new(
 #     formula = formula,
 #     data = data,
 #     penalty = penalty,
 #     smoother_params = NULL,
-#     calibrator = calibrator,
+#     calibrator = parse_calibrator(calibrator)),
 #     VERBOSE = VERBOSE
 #   )
 #   return(model)

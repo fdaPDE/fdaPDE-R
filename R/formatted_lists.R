@@ -58,6 +58,7 @@ SolutionPolicy <- function(x) {
 #' @export
 hyperparameters <- function(space, time = 0) {
   lambda <- list(
+    type = "fdaPDE_hyperparameters",
     space = space,
     time = time
   )
@@ -71,7 +72,7 @@ spatial_data <- function(domain, observations,
                          locations = NULL,
                          covariates = NULL) {
   data <- list(
-    type = "spatial_data",
+    type = "fdaPDE_spatialData",
     domain = domain,
     locations = locations,
     observations = observations,
@@ -85,10 +86,9 @@ functional_data <- function(domain, X,
                             locations = NULL,
                             w = NULL) {
   data <- list(
-    type = "functional_data",
+    type = "fdaPDE_functionalData",
     domain = domain,
     locations = locations,
-    Y = Y,
     X = X,
     w = w
   )
@@ -99,7 +99,7 @@ functional_data <- function(domain, X,
 functional_regression_data <- function(domain, Y, X,
                                        locations = NULL) {
   data <- list(
-    type = "functional_data",
+    type = "fdaPDE_functionalRegressionData",
     domain = domain,
     locations = locations,
     Y = Y,
@@ -110,14 +110,16 @@ functional_regression_data <- function(domain, Y, X,
 
 # calibrators ----
 
-#' @export
-off <- function() {
+off <- function(lambda = hyperparameters(space = 1e-4)) {
   ## calibration strategy specific parameters
   off_params <- NULL
   ## init list assembly
   off_init_list <- list(
+    type = "fdaPDE_calibrator",
     ## calibration strategy name
     name = "off",
+    ## lambda
+    lambda = lambda,
     ## parameters
     parameters = off_params
   )
@@ -125,7 +127,8 @@ off <- function() {
 }
 
 #' @export
-gcv <- function(optimizer = c("grid"),
+gcv <- function(lambda = hyperparameters(space = 10^seq(-9, 0, by = 0.5)),
+                optimizer = c("grid"),
                 edf_computation = c("stochastic", "exact"),
                 seed = -1, mc_samples = 100,
                 max_iter = NULL, step = NULL,
@@ -144,8 +147,11 @@ gcv <- function(optimizer = c("grid"),
   )
   ## init list assembly
   gcv_init_list <- list(
+    type = "fdaPDE_calibrator",
     ## calibration strategy name
     name = "gcv",
+    ## lambda grid
+    lambda = lambda,
     ## parameters
     parameters = gcv_params
   )
@@ -153,7 +159,8 @@ gcv <- function(optimizer = c("grid"),
 }
 
 #' @export
-kcv <- function(n_folds = 10, shuffle = TRUE, seed = NULL) {
+kcv <- function(lambda = hyperparameters(space = 10^seq(-9, 0, by = 1)),
+                n_folds = 10, shuffle = TRUE, seed = NULL) {
   ## calibration strategy specific parameters
   kcv_params <- list(
     n_folds = n_folds,
@@ -162,12 +169,24 @@ kcv <- function(n_folds = 10, shuffle = TRUE, seed = NULL) {
   )
   ## init list assembly
   kcv_init_list <- list(
+    type = "fdaPDE_calibrator",
     ## calibration strategy name
     name = "kcv",
+    ## lambda grid
+    lambda = lambda,
     ## parameters
     parameters = kcv_params
   )
   return(kcv_init_list)
+}
+
+parse_calibrator <- function(calibrator) {
+  if (calibrator$type == "fdaPDE_hyperparameters") {
+    return(off(lambda = calibrator))
+  } else {
+    ## TODO: check if this actually is a calibrator
+    return(calibrator)
+  }
 }
 
 #' @export
@@ -195,22 +214,20 @@ calibration <- function(strategy = c("off", "gcv", "kcv"), ...) {
 
 ### sequential ----
 
-sequential_params <- function(tolerance = 1e-6, max_iter = 20, seed = NULL) {
+sequential_params <- function(tolerance = 1e-6, max_iter = 20) {
   parameters <- list(
     tolerance = tolerance,
-    max_iter = max_iter,
-    seed = seed
+    max_iter = max_iter
   )
   return(parameters)
 }
 
 #' @export
-sequential <- function(calibrator = off(), lambda = hyperparameters(space = 1e-4), ...) {
+sequential <- function(calibrator = off(), ...) {
   sequential_init_list <- list(
     policy = "sequential",
     parameters = sequential_params(...),
-    calibrator = calibrator,
-    lambda = lambda
+    calibrator = parse_calibrator(calibrator)
   )
   return(sequential_init_list)
 }
@@ -222,7 +239,7 @@ monolithic_params <- function() {
 }
 
 #' @export
-monolithic <- function(calibrator = off(), lambda = hyperparameters(space = 1e-4)) {
+monolithic <- function(calibrator = hyperparameters(space = 1e-4), ...) {
   ## check calibrator availability
   if (calibrator$name != "off") {
     stop("Only off calibrator is available for this solution policy")
@@ -230,9 +247,8 @@ monolithic <- function(calibrator = off(), lambda = hyperparameters(space = 1e-4
   ##
   monolithic_init_list <- list(
     policy = "monolithic",
-    parameters = monolithic_params(),
-    calibrator = calibrator,
-    lambda = lambda
+    parameters = monolithic_params(...),
+    calibrator = parse_calibrator(calibrator)
   )
   return(monolithic_init_list)
 }
@@ -270,17 +286,7 @@ SRPDE_params <- function() {
 #' @export
 smoothing <- function(name = c("SRPDE"),
                       penalty = simple_laplacian_penalty(),
-                      regularization_type = c(
-                        "SpaceOnly",
-                        "SpaceTimeSeparable"
-                      ),
-                      sampling_type = c(
-                        "mesh_nodes",
-                        "pointwise",
-                        "areal"
-                      ),
-                      calibrator = off(),
-                      lambda = hyperparameters(space = 1e-4),
+                      calibrator = gcv(),
                       ...) {
   ## method specific parameters initialization
   parameters <- switch(match.arg(name),
@@ -294,13 +300,10 @@ smoothing <- function(name = c("SRPDE"),
     name = match.arg(name),
     ## regularization
     penalty = penalty,
-    regularization_type = match.arg(regularization_type),
-    sampling_type = match.arg(sampling_type),
     ## method specific parameters
     parameters = parameters,
     ## calibration
-    calibrator = calibrator,
-    lambda = lambda
+    calibrator = parse_calibrator(calibrator)
   )
   return(smoother_init_list)
 }
@@ -315,21 +318,37 @@ smoothing <- function(name = c("SRPDE"),
 ## it is not impemented as a method but as a function (that wraps a smoothing method)
 ## the goal of this function is to guarantee the consistency of
 ## the interfaces on both the user (R) and library (R-cpp) sides
-centering <- function(penalty = simple_laplacian_penalty(),
-                      smoother = smoothing(),
-                      calibrator = off(),
-                      lambda = hyperparameters(space = 1e-4)) {
+centering <- function(calibrator = off(),
+                      penalty = simple_laplacian_penalty(),
+                      smoother = smoothing()) {
   ## overwriting smoother defaults with the required ones
   ## necessary to guarantee the consistency with the other statistical models
   ## (each statistical model is responsible of its own calibration and lambda)
   ## while providing a clean interface to the final user
   smoother$penalty <- penalty
-  smoother$calibrator <- calibrator
-  smoother$lambda <- lambda
+  smoother$calibrator <- parse_calibrator(calibrator)
   center_init_list <- smoother
   return(center_init_list)
 }
 
+parse_center <- function(center, as.option = FALSE) {
+  if (!as.option) {
+    if (is.null(center) || is.logical(center)) {
+      return(centering())
+    } else {
+      return(center)
+    }
+  } else {
+    if (is.null(center)) {
+      return(TRUE)
+    } ## fPCA defaults center to TRUE
+    else if (is.logical(center)) {
+      return(center)
+    } else {
+      return(TRUE)
+    }
+  }
+}
 
 ### fPCA ----
 
@@ -341,44 +360,21 @@ fPCA_params <- function(n_pc = 3) {
 }
 
 fPCA_init <- function(penalty = simple_laplacian_penalty(),
-                      regularization_type = c(
-                        "SpaceOnly",
-                        "SpaceTimeSeparable"
-                      ),
-                      sampling_type = c(
-                        "mesh_nodes",
-                        "pointwise",
-                        "areal"
-                      ),
                       center = NULL, ## also defaults centering lambda
                       solver = sequential(), ## also defaults solver's lambda
                       ...) {
-  if(is.null(center) || is.logical(center)){
-    center_parsed <- centering()
-  } else {
-    center_parsed <- center
-  }
   fPCA_init_list <- list(
     name = "fPCA",
     ## regularization
     penalty = penalty,
-    regularization_type = match.arg(regularization_type),
-    sampling_type = match.arg(sampling_type),
     ## centering
-    center = center_parsed,
+    center = parse_center(center),
     ## analsysis
     solver = solver,
     ## method parameters
     parameters = fPCA_params(...),
     ## options
-    CENTER = ifelse(
-      is.null(center),
-      TRUE, ## fPCA defaults center to TRUE
-      ifelse(is.logical(center),
-        center, ## if a logic was provided it is used as option
-        TRUE ## if a calibrator was provided it sets the center option to true
-      )
-    )
+    CENTER = parse_center(center, as.option = TRUE)
   )
   return(fPCA_init_list)
 }
@@ -393,47 +389,23 @@ fPLS_params <- function(n_comp = 3) {
 }
 
 fPLS_init <- function(penalty = simple_laplacian_penalty(),
-                      regularization_type = c(
-                        "SpaceOnly",
-                        "SpaceTimeSeparable"
-                      ),
-                      sampling_type = c(
-                        "mesh_nodes",
-                        "pointwise",
-                        "areal"
-                      ),
-                      center = NULL, ## also defaults centering's lambda
-                      rsvd = sequential(), ## also defaults covariance maximization step's lambda
-                      smoother = smoothing(), ## also defaults regression step's lambda
-                      CENTER = NULL,
+                      center = NULL,
+                      solver = sequential(),
+                      smoother = smoothing(),
                       ...) {
-  if(is.null(center) || is.logical(center)){
-    center_parsed <- centering()
-  } else {
-    center_parsed <- center
-  }
   fPLS_init_list <- list(
     name = "fPLS",
     ## regularization
     penalty = penalty,
-    regularization_type = match.arg(regularization_type),
-    sampling_type = match.arg(sampling_type),
     ## centering
-    center = center_parsed,
+    center = parse_center(center),
     ## analysis
-    rsvd = rsvd,
+    solver = solver,
     smoother = smoother,
     ## method parameters
     parameters = fPLS_params(...),
     ## options
-    CENTER = ifelse(
-      is.null(center),
-      TRUE, ## fPCA defaults center to TRUE
-      ifelse(is.logical(center),
-        center,
-        TRUE
-      )
-    )
+    CENTER = parse_center(center, as.option = TRUE)
   )
   return(fPLS_init_list)
 }
@@ -443,15 +415,6 @@ fPLS_init <- function(penalty = simple_laplacian_penalty(),
 
 functional_model <- function(name = c("fPCA", "fPLS"),
                              penalty = simple_laplacian_penalty(),
-                             regularization_type = c(
-                               "SpaceOnly",
-                               "SpaceTimeSeparable"
-                             ),
-                             sampling_type = c(
-                               "mesh_nodes",
-                               "pointwise",
-                               "areal"
-                             ),
                              center = NULL,
                              solver = sequential(),
                              ...) {
@@ -459,8 +422,6 @@ functional_model <- function(name = c("fPCA", "fPLS"),
     "fPCA" = {
       fPCA_init(
         penalty = penalty,
-        regularization_type = match.arg(regularization_type),
-        sampling_type = match.arg(sampling_type),
         solver = solver,
         center = center,
         ...
@@ -469,9 +430,7 @@ functional_model <- function(name = c("fPCA", "fPLS"),
     "fPLS" = {
       fPLS_init(
         penalty = penalty,
-        regularization_type = match.arg(regularization_type),
-        sampling_type = match.arg(sampling_type),
-        rsvd = solver,
+        solver = solver,
         center = center,
         ...
       )

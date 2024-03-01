@@ -53,7 +53,8 @@ class R_RSVD {
           rsvd_sequential_.set_nfolds(calibrator_params["n_folds"]);
         }
         if(calibration_strategy != Calibration::off ){
-          if(calibrator_params["seed"] != R_NilValue) rsvd_sequential_.set_seed(calibrator_params["seed"]);
+          if(calibrator_params["seed"] != R_NilValue)
+            rsvd_sequential_.set_seed(Rcpp::as<std::size_t>(calibrator_params["seed"]));
         }
         // rsvd configuration
         rsvd_sequential_.set_tolerance(Rcpp::as<double>(sequential_params["tolerance"]));

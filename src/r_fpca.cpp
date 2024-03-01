@@ -31,7 +31,7 @@ RCPP_MODULE(cpp_fpca_spaceonly) {
       // setters
       .method("set_data",                 &cpp_fpca_spaceonly_base::set_data               )
       .method("set_spatial_locations",    &cpp_fpca_spaceonly_base::set_spatial_locations  )
-      .method("set_npc",                  &cpp_fpca_spaceonly_base::set_npc                )
+      .method("set_ncomp",                &cpp_fpca_spaceonly_base::set_npc                )
       .method("set_lambda",               &cpp_fpca_spaceonly_base::set_lambda             )
       .method("set_solver",               &cpp_fpca_spaceonly_base::set_solver             )
       // utilities
@@ -57,7 +57,7 @@ RCPP_MODULE(cpp_fpca_spacetimeseparable) {
       // setters
       .method("set_data",                 &cpp_fpca_spacetimeseparable_base::set_data               )
       .method("set_spatial_locations",    &cpp_fpca_spacetimeseparable_base::set_spatial_locations  )
-      .method("set_npc",                  &cpp_fpca_spacetimeseparable_base::set_npc                )
+      .method("set_ncomp",                &cpp_fpca_spacetimeseparable_base::set_npc                )
       .method("set_solver",               &cpp_fpca_spacetimeseparable_base::set_solver             )
       // utilities
       .method("init",                     &cpp_fpca_spacetimeseparable_base::init                   )
