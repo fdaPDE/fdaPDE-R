@@ -14,208 +14,208 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-.MeshCtr <- setRefClass(
-    Class = "MeshObject",
-    fields = c(
-        cpp_handler = "ANY",       ## cpp backend
-        m = "integer",             ## local dimension
-        n = "integer",             ## embedding dimension
-        time_mesh = "vector",      ## for spatio-temporal domains, the time dimension
-        domain_type = "character",
-        nodes = "matrix"           ## node of the triangulation
-    )
+#' A triangulated spatial domain
+#'
+.Mesh <- R6::R6Class(
+  "Mesh",
+  private = list(
+    mesh_ = "ANY", ## cpp backend
+    local_dim_ = 0L,
+    embed_dim_ = 0L
+  ),
+  public = list(
+    initialize = function(mesh, local_dim, embed_dim) {
+      private$mesh_ <- mesh
+      private$local_dim_ <- local_dim
+      private$embed_dim_ <- embed_dim
+    },
+    locate = function(locations) {
+      return(r_aligned_index(private$mesh_$locate(as.matrix(locations))))
+    }
+  ),
+  active = list(
+    nodes = function() private$mesh_$nodes(),
+    elements = function() r_aligned_index(private$mesh_$elements()),
+    boundary = function() private$mesh_$boundary(),
+    neighbors = function() {
+      neigh_ <- r_aligned_index(private$mesh_$neighbors())
+      neigh_[neigh_ == 0] <- -1 ## signal missing neighbor with -1
+      return(neigh_)
+    },
+    local_dim = function() private$local_dim_,
+    embed_dim = function() private$embed_dim_
+  )
 )
 
-## checks if a MeshObject represnts a spatio-temporal domain
-is_space_time <- function(mesh) {
-    return(length(mesh$time_mesh) != 0)
-}
-
-#' Create mesh object
-#'
-#' @param domain could be a \code{triangulation} returned by \code{\link[RTriangle]{triangulate}} or a named list containing:
-#' \itemize{
-#'    \item{\code{nodes}, a #nodes-by-2 matrix containing the x and y coordinates of the mesh nodes;}
-#'    \item{\code{elements}, a #elements-by-3 matrix specifiying the triangles giving the row's indices in \code{nodes} of the triangles' vertices;}
-#'    \item{\code{boundary}, a #nodes-by-1 matrix, with entries either '1' or '0'. An entry '1' indicates that the corresponding node is a boundary node; 
-#'           an entry '0' indicates that the corresponding node is not a boundary node.}
-#' }
-#' 
-#' @return An S4 object representing a Mesh.
-#' @rdname MeshObject
 #' @export
-#' @examples
-#' \dontrun{
-#' library(RTriangle)
-#' library(femR)
-#' p <- pslg(P=rbind(c(0, 0), c(1, 0), c(1, 1), c(0, 1)),
-#' S=rbind(c(1, 2), c(2, 3), c(3, 4), c(4,1)))
-#' unit_square <- triangulate(p, a = 0.00125, q=30)
-#' mesh <- Mesh(unit_square)
-#' }
-setGeneric("Mesh", function(domain) standardGeneric("Mesh"))
-
-#' @rdname MeshObject
-setMethod("Mesh",
-    signature = c(domain = "list"),
-    function(domain) {
-        domain$elements <- domain$elements - 1 ## perform index realignment for cpp handler
-        storage.mode(domain$elements) <- "integer"
-        ## extract local and embedding dimensions
-        m <- ncol(domain$elements) - 1
-        n <- ncol(domain$nodes)
-        ## derive domain type (TODO: handle network domains)
-        if (m == 2 && n == 2) {
-            name_flag <- "2d"
-        } else if (m == 2 && n == 3) {
-            name_flag <- "surface"
-        } else if (m == 3 && n == 3) {
-            name_flag <- "3d"
-        } else {
-            stop("wrong input argument provided.")
-        }
-        ## construct mesh and return
-        .MeshCtr(
-            cpp_handler = new(eval(parse(text = paste("cpp_", name_flag, "_domain", sep = ""))), domain),
-            m = as.integer(m),
-            n = as.integer(n),
-            time_mesh = vector(mode = "double"),
-            domain_type = name_flag,
-            nodes = domain$nodes
-        )
-    }
-)
-
-# @importClassesFrom RTriangle triangulation
-
-#' @rdname MeshObject
-setMethod("Mesh",
-    signature = c(domain = "triangulation"),
-    function(domain) {
-        elements <- domain$T - 1 ## perform index realignment for cpp handler
-        ## extract node and boundary informations
-        nodes <- domain$P
-        boundary <- matrix(0, nrow = nrow(nodes), ncol = 1)
-        boundary[as.vector(domain$E[domain$EB == 1, ]), ] <- 1
-        storage.mode(elements) <- "integer"
-        storage.mode(nodes)    <- "numeric"
-        storage.mode(boundary) <- "integer"
-        ## extract local and embedding dimensions
-        m <- ncol(elements) - 1
-        n <- ncol(nodes)
-        ## prepare list and construct mesh
-        domain <- list(elements = elements, nodes = nodes, boundary = boundary)
-        if (m == 2 & n == 2) {
-            .MeshCtr(
-                cpp_handler = new(cpp_2d_domain, domain),
-                m = as.integer(m),
-                n = as.integer(n),
-                time_mesh = vector(mode = "double"),
-                domain_type = "2d",
-                nodes = domain$P
-            )
-        } else {
-            stop("wrong input argument provided.")
-        }
-    }
-)
-
-#' create spatio-temporal domain
-#'
-#' @param op1 A mesh object created by \code{Mesh}.
-#' @param op2 A numeric vector.
-#' @return An S4 object representing a spatio-temporal domain.
-#' @rdname MeshObject_times_vector
-#' @export 
-setGeneric("%X%", function(op1, op2) standardGeneric("%X%"))
-
-#' @rdname MeshObject_times_vector
-setMethod("%X%",
-    signature = c(op1 = "MeshObject", op2 = "numeric"),
-    function(op1, op2) {
-        if (op2[1] > op2[length(op2)]) {
-              stop("first time instant greater than last time instant.")
-        }
-        op1$time_mesh <- op2
-        op1
-    }
-)
-
-## Mesh - auxiliary methods
-unroll_edges_aux <- function(mesh_) {
-    mesh <- mesh_$cpp_handler
-    edges <- matrix(nrow = 3 * nrow(mesh$elements()), ncol = 2)
-    for (i in 1:nrow(mesh$elements())) {
-        edges[(3 * (i - 1) + 1), ] <- mesh$elements()[i, c(1, 2)] + 1
-        edges[(3 * (i - 1) + 2), ] <- mesh$elements()[i, c(2, 3)] + 1
-        edges[(3 * (i - 1) + 3), ] <- mesh$elements()[i, c(3, 1)] + 1
-    }
-    edges
+Mesh <- function(mesh_data) {
+  mesh_data$elements <- cpp_aligned_index(mesh_data$elements)
+  storage.mode(mesh_data$elements) <- "integer"
+  ## extract local and embedding dimensions
+  local_dim <- ncol(mesh_data$elements) - 1
+  embed_dim <- ncol(mesh_data$nodes)
+  ## derive domain type
+  cpp_backend <- new(
+    eval(parse(text = paste("cpp", "mesh", as.character(local_dim), as.character(embed_dim), sep = "_"))), mesh_data
+  )
+  ## construct mesh and return
+  return(.Mesh$new(
+    mesh = cpp_backend,
+    local_dim = local_dim,
+    embed_dim = embed_dim
+  ))
 }
 
-setGeneric("unroll_edges", function(Mesh) standardGeneric("unroll_edges"))
-setMethod("unroll_edges", "MeshObject", function(Mesh) {
-    unroll_edges_aux(Mesh)
-})
-
-plot_mesh_aux <- function(mesh_, ...) {
-    mesh <- mesh_$cpp_handler
-    edges <- unroll_edges(mesh)
-    plot_ly(...) %>%
-        add_markers(
-            x = mesh$nodes()[, 1],
-            y = mesh$nodes()[, 2],
-            color = I("black"), size = I(1),
-            hoverinfo = "text",
-            text = paste(
-                "</br><b> Coordinates:", round(mesh$nodes()[, 1], 2),
-                round(mesh$nodes()[, 2], 2)
-            ),
-            showlegend = T,
-            visible = T
-        ) %>%
-        add_segments(
-            x = mesh$nodes()[edges[, 1], 1],
-            y = mesh$nodes()[edges[, 1], 2],
-            xend = mesh$nodes()[edges[, 2], 1],
-            yend = mesh$nodes()[edges[, 2], 2],
-            color = I("black"), size = I(1),
-            showlegend = F
-        ) %>%
-        layout(
-            xaxis = list(
-                title = "",
-                showgrid = F,
-                zeroline = F,
-                showticklabels = F
-            ),
-            yaxis = list(
-                title = "",
-                showgrid = F,
-                zeroline = F,
-                showticklabels = F
-            )
-        )
-}
-
-
-# setMethod("plot", signature=c(x="MeshObject"), function(x, ...){
-#   plot_mesh_aux(x, ...)  
-# })
-
-#' Plot a Mesh object
-#'
-#' @param x A \code{MeshObject} object defining the triangular mesh, as generated by \code{Mesh}
-#' @param ... Arguments representing graphical options to be passed to \code{\link[plotly]{plot_ly}}.
-#' @return A plotly object
+## the total number of intervals will be nx, and the overall number of nodes is nx + 1
 #' @export
-#' @examples
-#' \dontrun{
-#' library(femR)
-#' data("unit_square")
-#' mesh <- Mesh(unit_square)
-#' plot(mesh)
-#' }
-plot.MeshObject <-function(x, ...){
-  plot_mesh_aux(x, ...)
+MeshInterval <- function(a, b, n = NULL, by = NULL) {
+  if (!is.null(n) && !is.null(by)) stop("too many arguments.")
+  mesh_data <- list()
+  by_x <- if (!is.null(n)) ((b - a) / (n - 1)) else by
+  mesh_data$nodes <- if (!is.null(by_x)) {
+    as.matrix(seq(from = a, to = b, by = by_x))
+  } else {
+    as.matrix(seq(from = a, to = b))
+  }
+  return(.Mesh$new(
+    mesh = new(cpp_mesh_1_1, mesh_data),
+    local_dim = 1,
+    embed_dim = 1
+  ))
+}
+
+#' @export
+MeshUnitInterval <- function(n = NULL, by = NULL) {
+  return(IntervalMesh(0, 1, n))
+}
+
+#' @export
+MeshRectangle <- function(a_x, b_x, a_y, b_y, nx = NULL, ny = NULL, by_x = NULL, by_y = NULL) {
+  if ((!is.null(nx) && !is.null(by_x)) || (!is.null(ny) && !is.null(by_y))) stop("too many arguments.")
+  mesh_data <- list()
+  by_x <- if (!is.null(nx)) ((b_x - a_x) / (nx - 1)) else by_x
+  by_y <- if (!is.null(ny)) ((b_y - a_y) / (ny - 1)) else by_y
+
+  grid_x <- if (!is.null(by_x)) as.matrix(seq(a_x, b_x, by = by_x)) else as.matrix(seq(a_x, b_X))
+  grid_y <- if (!is.null(by_y)) as.matrix(seq(a_y, b_y, by = by_y)) else as.matrix(seq(a_y, b_y))
+  mesh_data$nodes <- as.matrix(expand.grid(grid_x, grid_y))
+  ## build triangles (each subrectangle is split in 2 triangles)
+  triangles <- matrix(0, nrow = 2 * (nx - 1) * (ny - 1), ncol = 3)
+  j <- 1
+  for (y in seq_len(ny - 1)) {
+    for (x in seq_len(nx - 1)) {
+      ## build vector of vertices of j-th subrectangle
+      p <- x + (y - 1) * nx ## base point
+      v <- c(p, p + 1, p + nx, p + nx + 1)
+      ## compute vertices of each triangle in the subrectangle
+      triangles[j,     ] <- c(v[1], v[2], v[3])
+      triangles[j + 1, ] <- c(v[2], v[3], v[4])
+      j <- j + 2
+    }
+  }
+  mesh_data$elements <- cpp_aligned_index(triangles)
+  ## build boundary
+  boundary <- matrix(0, nrow(mesh_data$nodes))
+  for (i in 1:nrow(mesh_data$nodes)) {
+    if ((mesh_data$nodes[i, 1] == a_x || mesh_data$nodes[i, 1] == b_x) ||
+      (mesh_data$nodes[i, 2] == a_y || mesh_data$nodes[i, 2] == b_y)) {
+      boundary[i] <- 1
+    }
+  }
+  mesh_data$boundary <- boundary
+  return(.Mesh$new(
+    mesh = new(cpp_mesh_2_2, mesh_data),
+    local_dim = 2,
+    embed_dim = 2
+  ))
+}
+
+#' @export
+MeshSquare <- function(a, b, n = NULL, by = NULL) {
+  return(MeshRectangle(a, b, a, b, n, n, by, by))
+}
+
+#' @export
+MeshUnitSquare <- function(n = NULL, by = NULL) {
+  return(MeshSquare(0, 1, n, by))
+}
+
+#' @export
+MeshCube <- function(a, b, n = NULL, by = NULL) {
+  if (!is.null(n) && !is.null(by)) stop("too many arguments.")
+  mesh_data <- list()
+  if (!is.null(n)) {
+    by_x <- ((b - a) / (n - 1))
+  } else {
+    by_x <- by
+    n <- ((b - a) / by_x) + 1
+  }
+  grid <- if (!is.null(by_x)) as.matrix(seq(a, b, by = by_x)) else as.matrix(seq(a, b))
+  mesh_data$nodes <- as.matrix(expand.grid(grid, grid, grid))
+  ## build tetrahedrons (each subcube can be split in 5 tetrahedrons)
+  tetrahedrons <- matrix(0, nrow = 5 * (n - 1)^3, ncol = 4)
+  j <- 1
+  for (z in seq_len(n - 1)) {
+    for (y in seq_len(n - 1)) {
+      for (x in seq_len(n - 1)) {
+        ## build vector of vertices of i-th subcube
+        p <- x + (y - 1) * n + (z - 1) * n^2 ## base point
+        v <- c(p, p + 1, p + n, p + n + 1, p + n^2, p + n^2 + 1, p + n^2 + n, p + n^2 + n + 1)
+        ## compute vertices of each thetraedron in the subcube
+        tetrahedrons[j,     ] <- c(v[1], v[2], v[3], v[5])
+        tetrahedrons[j + 1, ] <- c(v[2], v[3], v[4], v[8])
+        tetrahedrons[j + 2, ] <- c(v[2], v[3], v[5], v[8])
+        tetrahedrons[j + 3, ] <- c(v[2], v[5], v[6], v[8])
+        tetrahedrons[j + 4, ] <- c(v[3], v[5], v[7], v[8])
+        j <- j + 5
+      }
+    }
+  }
+  mesh_data$elements <- cpp_aligned_index(tetrahedrons)
+  ## build boundary
+  boundary <- matrix(0, nrow(mesh_data$nodes))
+  for (i in 1:nrow(mesh_data$nodes)) {
+    if ((mesh_data$nodes[i, 1] == a || mesh_data$nodes[i, 1] == b) ||
+      (mesh_data$nodes[i, 2] == a || mesh_data$nodes[i, 2] == b) ||
+      (mesh_data$nodes[i, 3] == a || mesh_data$nodes[i, 3] == b)) {
+      boundary[i] <- 1
+    }
+  }
+  mesh_data$boundary <- boundary
+  return(mesh_data)
+  return(.Mesh$new(
+    mesh = new(cpp_mesh_3_3, mesh_data),
+    local_dim = 3,
+    embed_dim = 3
+  ))
+}
+
+#' @export
+MeshUnitCube <- function(n = NULL, by = NULL) {
+  return(MeshCube(0, 1, n))
+}
+
+.TensorizedMesh <- R6::R6Class(
+  "TensorizedMesh",
+  inherit = .Mesh,
+  private = list(
+    rhs_ = vector(mode = "double", length = 0L)
+  ),
+  public = list(
+    initialize = function(lhs, rhs) {
+      super$initialize(lhs, lhs$local_dim, lhs$embed_dim)
+      private$rhs_ <- rhs
+    }
+  ),
+  active = list(
+    rhs_nodes = function() rhs_
+  )
+)
+
+#' @export
+`%X%.Mesh` <- function(lhs, rhs) {
+    if(!is(rhs, "vector") && (inherits(rhs, "Mesh") && !(rhs$local_dim == 1 && rhs$embed_dim == 1))) {
+        stop(deparse(substitute(rhs)), " must be a vector or a 1D Mesh object.")
+    }
+    return(.TensorizedMesh$new(lhs, rhs))
 }

@@ -19,6 +19,6 @@
 
 // make fdaPDE-core and fdaPDE-cpp symbols visibile to Rcpp
 #include <fdaPDE/core.h>
-#include <fdaPDE/fda_pde.h>
+#include <fdaPDE/fdapde.h>
 
 #endif // __FDAPDE_R_SYMBOLS_INCLUDE__

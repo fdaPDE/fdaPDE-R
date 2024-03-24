@@ -1,4 +1,4 @@
-[submodule "src/fdaPDE"]
-	path = src/fdaPDE
+[submodule "inst/include/fdaPDE"]
+	path = inst/include/fdaPDE
 	url = https://github.com/fdaPDE/fdaPDE-cpp
 	branch = stable

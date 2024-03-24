@@ -14,14 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <RcppEigen.h>
-// [[Rcpp::depends(RcppEigen)]]
-#include "headers/r_gcv.h"
+#ifndef __R_UTILS_H__
+#define __R_UTILS_H__
 
-RCPP_MODULE(cpp_gcv) {
-    Rcpp::class_<R_GCV>("cpp_gcv")
-      .constructor<Rcpp::XPtr<GCV>>()
-      .method("gcvs"      , &R_GCV::gcvs)
-      .method("edfs"      , &R_GCV::edfs)
-      .method("calibrate" , &R_GCV::calibrate);
+namespace fdapde {
+namespace r {
+
+template <typename T> T* get_env_as(const Rcpp::Environment& r_env) {
+    SEXP pde_ptr = r_env[".pointer"];
+    return reinterpret_cast<T*>(R_ExternalPtrAddr(pde_ptr));
 }
+
+}   // namespace r
+}   // namespace fdapde
+
+#endif   // __R_UTILS_H__

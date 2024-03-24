@@ -16,19 +16,10 @@
 
 #include <RcppEigen.h>
 // [[Rcpp::depends(RcppEigen)]]
-#include "headers/r_srpde.h"
-
-// Rcpp modules definition
-using cpp_srpde = R_SRPDE;
-RCPP_MODULE(cpp_srpde) {
-    Rcpp::class_<R_SRPDE>("cpp_srpde")
-      .constructor<Rcpp::Environment, int>()
-      .method("f"               , &R_SRPDE::f               )
-      .method("fitted"          , &R_SRPDE::fitted          )
-      .method("get_gcv"         , &R_SRPDE::get_gcv         )
-      .method("set_lambda_D"    , &R_SRPDE::set_lambda_D    )
-      .method("set_observations", &R_SRPDE::set_observations)
-      .method("set_covariates"  , &R_SRPDE::set_covariates  )
-      .method("init"            , &R_SRPDE::init            )
-      .method("solve"           , &R_SRPDE::solve           );
+#include <fdaPDE/linear_algebra.h>
+  
+// [[Rcpp::export]]
+Eigen::SparseMatrix<double>
+kronecker_tensor_product(const Eigen::SparseMatrix<double>& lhs, const Eigen::SparseMatrix<double>& rhs) {
+    return Eigen::SparseMatrix<double>(fdapde::core::Kronecker(lhs, rhs));
 }
