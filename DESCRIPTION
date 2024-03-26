@@ -13,3 +13,6 @@ Encoding: UTF-8
 License: CC BY-NC-SA 4.0
 NeedsCompilation: yes
 SystemRequirements: GNU make
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

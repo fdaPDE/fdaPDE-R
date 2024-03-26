@@ -35,8 +35,8 @@
   ),
   active = list(
     nodes = function() private$mesh_$nodes(),
-    elements = function() r_aligned_index(private$mesh_$elements()),
-    boundary = function() private$mesh_$boundary(),
+    elements  = function() r_aligned_index(private$mesh_$elements()),
+    boundary  = function() private$mesh_$boundary(),
     neighbors = function() {
       neigh_ <- r_aligned_index(private$mesh_$neighbors())
       neigh_[neigh_ == 0] <- -1 ## signal missing neighbor with -1
@@ -48,15 +48,15 @@
 )
 
 #' @export
-Mesh <- function(mesh_data) {
-  mesh_data$elements <- cpp_aligned_index(mesh_data$elements)
-  storage.mode(mesh_data$elements) <- "integer"
+Mesh <- function(data) {
+  data$elements <- cpp_aligned_index(data$elements)
+  storage.mode(data$elements) <- "integer"
   ## extract local and embedding dimensions
-  local_dim <- ncol(mesh_data$elements) - 1
-  embed_dim <- ncol(mesh_data$nodes)
+  local_dim <- ncol(data$elements) - 1
+  embed_dim <- ncol(data$nodes)
   ## derive domain type
   cpp_backend <- new(
-    eval(parse(text = paste("cpp", "mesh", as.character(local_dim), as.character(embed_dim), sep = "_"))), mesh_data
+    eval(parse(text = paste("cpp", "mesh", as.character(local_dim), as.character(embed_dim), sep = "_"))), data
   )
   ## construct mesh and return
   return(.Mesh$new(
@@ -182,7 +182,6 @@ MeshCube <- function(a, b, n = NULL, by = NULL) {
     }
   }
   mesh_data$boundary <- boundary
-  return(mesh_data)
   return(.Mesh$new(
     mesh = new(cpp_mesh_3_3, mesh_data),
     local_dim = 3,
@@ -214,8 +213,153 @@ MeshUnitCube <- function(n = NULL, by = NULL) {
 
 #' @export
 `%X%.Mesh` <- function(lhs, rhs) {
-    if(!is(rhs, "vector") && (inherits(rhs, "Mesh") && !(rhs$local_dim == 1 && rhs$embed_dim == 1))) {
-        stop(deparse(substitute(rhs)), " must be a vector or a 1D Mesh object.")
+  if (!is(rhs, "vector") || !inheris(rsh, "Mesh") ||
+    (inherits(rhs, "Mesh") && !(rhs$local_dim == 1 && rhs$embed_dim == 1))) {
+    stop(deparse(substitute(rhs)), " must be a vector or a 1D Mesh object.")
+  }
+  return(.TensorizedMesh$new(lhs, rhs))
+}
+
+`%<<%` <- function(x, ...) UseMethod("%<<%", x)
+`%<<%.file` <- function(x, what) {
+  if (!isOpen(x)) stop(deparse(substitute(x)), ": file not open.")
+  cat(what, file = x, append = TRUE)
+}
+
+#' @export
+write_vtu <- function(mesh, file = NULL, data = NULL) {
+  ## check that mesh is embedded in 3D
+  if (!inherits(mesh, "Mesh")) stop(deparse(substitute(mesh)), ": not a valid Mesh object.")
+  if (!(mesh$embed_dim == 3)) stop(deparse(substitute(mesh)), ": not embedded in 3D space.")
+  n_nodes <- nrow(mesh$nodes)
+  n_elems <- nrow(mesh$elements)
+  dim <- mesh$embed_dim
+
+  ## open file connector in write mode
+  if (!is.character(file)) stop("invalid output file.")
+  vtu <- file(file, open = "w")
+
+  ## insert vtk header
+  vtu %<<% '<?xml version="1.0"?>\n'
+  vtu %<<% '<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">\n'
+  vtu %<<% "<UnstructuredGrid>\n"
+  vtu %<<% paste0('<Piece NumberOfPoints="', n_nodes, '" NumberOfCells="', n_elems, '">\n')
+  ## mesh nodes (vtk points)
+  vtu %<<% "<Points>\n"
+  vtu %<<% paste0('<DataArray type="Float64" Name="nodes" NumberOfComponents="', dim, '" format="ascii">\n')
+  write.table(mesh$nodes, file = vtu, append = T, row.names = F, col.names = F)
+  vtu %<<% "</DataArray>\n"
+  vtu %<<% "</Points>\n"
+  ## mesh elements (vtk cells)
+  vtu %<<% "<Cells>\n"
+  ## specifies the point connectivity. All the cells’ point lists are concatenated together.
+  vtu %<<% '<DataArray type="Int32" Name="connectivity" format="ascii">\n'
+  write.table(
+    format(mesh$elements - 1, scientific = F),
+    file = vtu, append = T, row.names = F, col.names = F, quote = F
+  )
+  vtu %<<% "</DataArray>\n"
+  ## specifies the offset into the connectivity array for the end of each cell
+  vtu %<<% '<DataArray type="Int32" Name="offsets" format="ascii">\n'
+  offset <- if (mesh$local_dim == 2) 3 else 4 ## number of points per element for triangular and tetrahedral meshes
+  write.table(
+    format(matrix(seq(offset, offset * n_elems, by = offset), nrow = 1, byrow = T), scientific = F),
+    file = vtu, append = T, row.names = F, col.names = F, quote = F
+  )
+  vtu %<<% "</DataArray>\n"
+  ## specifies the type of each cell
+  vtu %<<% '<DataArray type="Int32" Name="types" format="ascii">\n'
+  vtk_cell_type <- if (mesh$local_dim == 2) 5 else 10 ## vtk code for (surface) triangular and tetrahedral elements
+  write.table(
+    format(matrix(rep(vtk_cell_type, n_elems), nrow = 1, byrow = T), scientific = F),
+    file = vtu, append = T, row.names = F, col.names = F, quote = F
+  )
+  vtu %<<% "</DataArray>\n"
+  vtu %<<% "</Cells>\n"
+
+  if (!is.null(data)) {
+    nvdata <- ncol(data) ## number of signals to plot
+    vtu %<<% "<PointData>\n"
+    for (i in seq_len(nvdata)) {
+      vtu %<<% paste0('<DataArray type="Float64" Name="data', i, '" NumberOfComponents="1" format="ascii">\n')
+      write.table(matrix(data[, i], nrow = 1), file = vtu, append = T, row.names = F, col.names = F)
+      vtu %<<% "</DataArray>\n"
     }
-    return(.TensorizedMesh$new(lhs, rhs))
+    vtu %<<% "</PointData>\n"
+  }
+  ## footer
+  vtu %<<% "</Piece>\n"
+  vtu %<<% "</UnstructuredGrid>\n"
+  vtu %<<% "</VTKFile>\n"
+
+  ## close file
+  close(vtu)
+}
+
+## missing data import and boundary import
+
+#' @export
+read_vtu <- function(file) {
+  ## open file descriptor in read-only mode
+  vtu <- file(file, open = "r")
+  ## informations parsed from file
+  n_points <- 0
+  n_cells <- 0
+  dim <- 0
+  mesh_data <- list()
+
+  read_xml_property <- function(line, name) {
+    l <- regexpr(paste0(name, '=\"[0-9]+\"'), line)
+    if (l[1] == -1) stop("XML property ", deparse(substitute(name)), " not found.")
+    return(as.numeric(substr(line, l[1] + nchar(paste0(name, '=\"')), l[1] + attr(l, "match.length") - 2)))
+  }
+
+  linenum <- 1 ## current line number
+  status <- 0 ## parsing status (1: <Points> detected, 2: <Cells> detected)
+  while (TRUE) {
+    line <- readLines(vtu, n = 1)
+    if (length(line) == 0) { ## EOF
+      break
+    }
+    if (grepl("VTKFile", line) && !grepl("/VTKFile", line)) {
+      ## check if type is UnstructeredGrid, stop if not
+      if (!grepl("UnstructuredGrid", line)) stop("only UnstructedGrid VTK format supported.")
+    }
+    if (grepl("Piece", line) && !grepl("/Piece", line)) {
+      n_points <- read_xml_property(line, "NumberOfPoints")
+      n_cells <- read_xml_property(line, "NumberOfCells")
+    }
+    ## <Points> ... </Points> block parsing logic
+    if (status == 1) {
+      if (grepl("DataArray", line) && !grepl("/DataArray", line)) {
+        dim <- read_xml_property(line, "NumberOfComponents")
+        ## read points matrix
+        mesh_data$nodes <- as.matrix(read.table(vtu, nrows = n_points))
+        colnames(mesh_data$nodes) <- NULL
+        status <- 0
+      }
+    }
+    ## <Cells> ... </Cells> block parsing logic
+    if (status == 2) {
+      if (grepl("DataArray", line) && grepl("connectivity", line)) {
+        ## read elements matrix
+        mesh_data$elements <- as.matrix(read.table(vtu, nrows = n_cells))
+        colnames(mesh_data$elements) <- NULL
+        status <- 0
+      }
+    }
+    if (grepl("<Points>", line)) status <- 1
+    if (grepl("<Cells>" , line)) status <- 2
+    linenum <- linenum + 1
+  }
+  if (nrow(mesh_data$nodes) == 0 || nrow(mesh_data$elements) == 0) stop("VTK parsing error.")
+  close(vtu) ## close file connection
+
+  mesh_data$boundary <- matrix(0, nrow(mesh_data$nodes))
+  local_dim <- if (ncol(mesh_data$elements) == 4) 3 else 2 
+  return(.Mesh$new(
+    mesh = new(eval(parse(text = paste("cpp_mesh", local_dim, dim, sep = "_"))), mesh_data),
+    local_dim = local_dim,
+    embed_dim = dim
+  ))
 }

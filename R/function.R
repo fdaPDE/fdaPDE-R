@@ -17,33 +17,32 @@
 ## a symbolic expression
 .SymbolicExpression <- R6::R6Class("SymbolicExpression",
   private = list(
-    expr_ = "character",
+    expr_ = character(),
+    symbolic_ = character(),
     symbol_table_ = list()
   ),
   public = list(
-    initialize = function(symbolic_expr = NA, symbol_table = list()) {
-      private$expr_ <- symbolic_expr
+    initialize = function(expr = NA, symbolic = NA, symbol_table = list()) {
+      private$expr_ <- expr
       private$symbol_table_ <- symbol_table
+      private$symbolic_ <- symbolic
     },
     print = function(...) {
-      cat("<SymbolicExpression>: ", private$expr_, "\n", sep = "")
-      cat("Symbols Table\n", sep = "")
-      for (p in names(private$symbol_table_)) {
-        cat(p, "\n", sep = "")
-        print(private$symbol_table_[[p]])
-      }
+      cat("Symbolic expression: ", private$symbolic_, "\n", sep = "")
     }
   ),
   active = list(
     expr = function() private$expr_,
-    symbol_table = function() private$symbol_table_
+    symbol_table = function() private$symbol_table_,
+    symbolic = function() private$symbolic_
   )
 )
 
 ## local utilities
-parenthesize <- function(expr, apply = TRUE) ifelse(apply, paste("(", expr, ")", sep = ""), expr)
-is.symbolic_function <- function(sym) inherits(sym, "SymbolicFunction")
-is.symbolic_expression <- function(sym) inherits(sym, "SymbolicExpression")
+parenthesize <- function(expr, apply = TRUE) ifelse(apply, paste0("(", expr, ")"), expr)
+is.symbolic_function <- function(obj) inherits(obj, "SymbolicFunction")
+is.symbolic_expression <- function(obj) inherits(obj, "SymbolicExpression")
+is.composite_expression <- function(obj) is.symbolic_expression(obj) && !is.symbolic_function(obj)
 ## returns false if the evaluation of expression e is invalid
 try_eval <- function(e) {
   success <- TRUE
@@ -54,46 +53,61 @@ random_name <- function(length = 10) {
   name <- paste0(sample(c(letters, "1", "2", "3", "4", "5", "6", "7", "8", "9"), length, TRUE),
     collapse = ""
   )
-  return(paste("<", name, ">", sep = ""))
+  return(paste0("<", name, ">"))
 }
 
-merge_symbolics <- function(expr1, expr2, OP) {
+merge_symbolics <- function(obj1, obj2, expr1, expr2, OP) {
   ## check if operands require parenthesization
   p1 <- regexpr("^\\((.*)\\)", expr1)[1] != -1
   p2 <- regexpr("^\\((.*)\\)", expr2)[1] != -1
-  ## recursively evaluate operands
-  e1 <- eval(parse(text = expr1))
-  e2 <- eval(parse(text = expr2))
-  if (is.symbolic_expression(e1) && is.symbolic_expression(e2)) {
+  ## obj1 and obj2 are both composite expressions or symbolic functions
+  if ((is.composite_expression(obj1) && is.composite_expression(obj2)) ||
+    (is.symbolic_function(obj1) && is.symbolic_function(obj2))) {
     return(
       .SymbolicExpression$new(
-        symbolic_expr = paste(parenthesize(e1$expr, p1), as.character(OP), parenthesize(e2$expr, p2)),
-        symbol_table = modifyList(e1$symbol_table, e2$symbol_table)
+        expr = paste0(parenthesize(obj1$expr, p1), as.character(OP), parenthesize(obj2$expr, p2)),
+        symbolic = if (is.symbolic_function(obj1)) {
+          paste0(expr1, as.character(OP), expr2)
+        } else {
+          paste0(obj1$symbolic, as.character(OP), obj2$symbolic)
+        },
+        symbol_table = modifyList(obj1$symbol_table, obj2$symbol_table)
       )
     )
-  } else { ## one between e1 and e2 is a value
-    if (is.symbolic_expression(e1)) {
-      v <- e2
-      e <- e1
-    } else {
-      v <- e1
-      e <- e2
-    }
-    value_name <- parenthesize(random_name(), p1)
-    symbolic_expr <- ifelse(!is.symbolic_expression(e1),
-      paste(value_name, as.character(OP), parenthesize(e$expr, p2), sep = ""),
-      paste(parenthesize(e$expr, p2), as.character(OP), value_name, sep = "")
-    )
+  } else {
     identifier <- list()
-    identifier[[value_name]] <- v
-
+    value_name <- parenthesize(random_name(), p1)
+    ## obj1 is either a value or a symbolic function, and obj2 is a symbolic expression
+    if (!is.symbolic_expression(obj1) || is.symbolic_function(obj1)) {
+      identifier[[value_name]] <- obj1
+      e <- obj2 ## this must inherits from SymbolicExpression
+      expr <- paste0(value_name, as.character(OP), parenthesize(e$expr, p2))
+      symb <- if (is.symbolic_function(obj2)) {
+        paste0(expr1, as.character(OP), expr2)
+      } else {
+        paste0(expr1, as.character(OP), e$symbolic)
+      }
+    } else { ## obj2 must be either a value or a symbolic function
+      identifier[[value_name]] <- obj2
+      e <- obj1 ## this must inherits from SymbolicExpression
+      expr <- paste0(parenthesize(e$expr, p1), as.character(OP), value_name)
+      symb <- if (is.symbolic_function(obj1)) {
+        paste0(expr1, as.character(OP), expr2)
+      } else {
+        paste0(e$symbolic, as.character(OP), expr2)
+      }
+    }
     if (is.symbolic_function(e)) { ## create new symbolic expression
-      return(.SymbolicExpression$new(
-        symbolic_expr = symbolic_expr,
-        symbol_table = modifyList(identifier, e$symbol_table)
-      ))
+      return(
+        .SymbolicExpression$new(
+          expr = expr,
+          symbolic = symb,
+          symbol_table = modifyList(identifier, e$symbol_table)
+        )
+      )
     } else { ## modify symbolic in place
-      set_private(e, "expr_", symbolic_expr)
+      set_private(e, "expr_", expr)
+      set_private(e, "symbolic_", symb)
       set_private(e, "symbol_table_", modifyList(identifier, e$symbol_table))
       return(e)
     }
@@ -103,7 +117,7 @@ merge_symbolics <- function(expr1, expr2, OP) {
 #' addition between symbolic expressions
 #' @export
 `+.SymbolicExpression` <- function(op1, op2) {
-  merge_symbolics(expr1 = deparse(substitute(op1)), expr2 = deparse(substitute(op2)), OP = "+")
+  merge_symbolics(obj1 = op1, obj2 = op2, expr1 = deparse(substitute(op1)), expr2 = deparse(substitute(op2)), OP = "+")
 }
 
 #' unary negation and subtraction between symbolic expressions
@@ -116,13 +130,16 @@ merge_symbolics <- function(expr1, expr2, OP) {
       return(-x)
     }
   }
-  p1 <- regexpr("^\\((.*)\\)", deparse(substitute(op1)))[1] != -1
+  expr1 <- deparse(substitute(op1))
+  p1 <- regexpr("^\\((.*)\\)", expr1)[1] != -1
   if (is.null(op2)) { ## unary minus
-    set_private(op1, "expr_", paste("-", parenthesize(op1$expr, p1)))
+    set_private(op1, "expr_", paste0("-", parenthesize(op1$expr, p1)))
+    set_private(op1, "symbolic_", if (is.symbolic_function(op1)) paste0("-", expr1) else paste0("-", op1$symbolic))
     set_private(op1, "symbol_table_", lapply(op1$symbol_table, negate))
     return(op1)
   }
-  p2 <- regexpr("^\\((.*)\\)", deparse(substitute(op2)))[1] != -1
+  expr2 <- deparse(substitute(op2))
+  p2 <- regexpr("^\\((.*)\\)", expr2)[1] != -1
   if (is.symbolic_expression(op1) && is.symbolic_expression(op2)) {
     set_private(op2, "symbol_table_", lapply(op2$symbol_table, negate))
   } else { ## one between op1 and op2 is a value
@@ -132,74 +149,79 @@ merge_symbolics <- function(expr1, expr2, OP) {
       op2 <- -op2
     }
   }
-  merge_symbolics(expr1 = deparse(substitute(op1)), expr2 = deparse(substitute(op2)), OP = "-")
+  merge_symbolics(obj1 = op1, obj2 = op2, expr1 = deparse(substitute(op1)), expr2 = deparse(substitute(op2)), OP = "-")
 }
 
 #' product between symbolic expressions
 #' @export
 `*.SymbolicExpression` <- function(op1, op2) {
-  merge_symbolics(expr1 = deparse(substitute(op1)), expr2 = deparse(substitute(op2)), OP = "*")
+  merge_symbolics(obj1 = op1, obj2 = op2, expr1 = deparse(substitute(op1)), expr2 = deparse(substitute(op2)), OP = "*")
 }
 
-unary_symbolic <- function(tag, expr) {
-  e <- eval(parse(text = expr))
-  if (!inherits(e, "SymbolicExpression")) {
-    if (!try_eval(e)) stop("object ", e, " not found.")
+unary_symbolic <- function(tag, obj, expr) {
+  if (!inherits(obj, "SymbolicExpression")) {
+    if (!try_eval(obj)) stop("object ", expr, " not found.")
   }
-  if (is.symbolic_function(e)) {
+  if (is.symbolic_function(obj)) {
     ## create new symbolic expression
     return(.SymbolicExpression$new(
-      symbolic_expr = paste(tag, parenthesize(e$expr), sep = ""),
-      symbol_table = e$symbol_table
+      expr = paste0(tag, parenthesize(obj$expr)),
+      symbolic = paste0(tag, "(", expr, ")"),
+      symbol_table = obj$symbol_table
     ))
   }
-  set_private(e, "expr_", paste(tag, parenthesize(e$expr), sep = ""))
-  return(e)
+  set_private(obj, "expr_", paste0(tag, parenthesize(obj$expr)))
+  set_private(obj, "symbolic_", expr)
+  return(obj)
 }
 
-binary_symbolic <- function(tag, expr1, expr2) {
-  e1 <- eval(parse(text = expr1))
-  e2 <- eval(parse(text = expr2))
-  if(is.symbolic_expression(e1) && is.symbolic_expression(e2)) {
-      return(
+binary_symbolic <- function(tag, obj1, obj2, expr1, expr2) {
+  if (is.symbolic_expression(obj1) && is.symbolic_expression(obj2)) {
+    return(
       .SymbolicExpression$new(
-        symbolic_expr = paste(tag, "(", e1$expr, ",", e2$expr, ")", sep = ""),
-        symbol_table = modifyList(e1$symbol_table, e2$symbol_table)
+        expr = paste0(tag, "(", obj1$expr, ",", obj2$expr, ")"),
+        symbolic = paste0(tag, "(", expr1, ",", expr2, ")"),
+        symbol_table = modifyList(obj1$symbol_table, obj2$symbol_table)
       )
     )
   } else { ## one between e1 and e2 is a value
-    if (is.symbolic_expression(e1)) {
-      v <- e2
-      e <- e1
+    if (is.symbolic_expression(obj1)) {
+      v <- obj2
+      e <- obj1
     } else {
-      v <- e1
-      e <- e2
+      v <- obj1
+      e <- obj2
     }
     value_name <- random_name()
-    symbolic_expr <- ifelse(!is.symbolic_expression(e1),
-        paste(tag, "(", value_name, ",", e$expr, ")", sep = ""),
-        paste(tag, "(", e$expr, ",", value_name, ")", sep = "")
-    )
+    expr <- if (!is.symbolic_expression(obj1)) {
+      paste0(tag, "(", value_name, ",", e$expr, ")")
+    } else {
+      paste0(tag, "(", e$expr, ",", value_name, ")")
+    }
     identifier <- list()
     identifier[[value_name]] <- v
     if (is.symbolic_function(e)) { ## create new symbolic expression
       return(.SymbolicExpression$new(
-        symbolic_expr = symbolic_expr,
+        expr = expr,
+        symbolic = paste0(tag, "(", expr1, ",", expr2, ")"),
         symbol_table = modifyList(identifier, e$symbol_table)
       ))
     } else { ## modify symbolic in place
-      set_private(e, "expr_", symbolic_expr)
+      set_private(e, "expr_", expr)
+      set_private(e, "symbolic_", paste0(tag, "(", expr1, ",", expr2, ")"))
       set_private(e, "symbol_table_", modifyList(identifier, e$symbol_table))
       return(e)
     }
   }
 }
 
-grad    <- function(op) unary_symbolic("grad"   , deparse(substitute(op)))
-div     <- function(op) unary_symbolic("div"    , deparse(substitute(op)))
-laplace <- function(op) unary_symbolic("laplace", deparse(substitute(op)))
-dt      <- function(op) unary_symbolic("dt"     , deparse(substitute(op)))
-inner   <- function(op1, op2) binary_symbolic("inner", deparse(substitute(op1)), deparse(substitute(op2)))
+grad <- function(op) unary_symbolic("grad", op, deparse(substitute(op)))
+div <- function(op) unary_symbolic("div", op, deparse(substitute(op)))
+laplace <- function(op, name = NULL) {
+  if (is.null(name)) unary_symbolic("laplace", op, deparse(substitute(op))) else unary_symbolic("laplace", op, name)
+}
+dt <- function(op) unary_symbolic("dt", op, deparse(substitute(op)))
+inner <- function(op1, op2) binary_symbolic("inner", op1, op2, deparse(substitute(op1)), deparse(substitute(op2)))
 
 ## symbolic mathematical function
 .SymbolicFunction <- R6::R6Class("SymbolicFunction",
@@ -223,7 +245,7 @@ inner   <- function(op1, op2) binary_symbolic("inner", deparse(substitute(op1)),
       ))
     },
     print = function(...) {
-      cat("<SymbolicFunction>\n", sep = "")
+      cat("SymbolicFunction\n", sep = "")
     }
   ),
   ## active binding

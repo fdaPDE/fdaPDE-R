@@ -25,14 +25,30 @@ namespace r {
       .method("set_observations", &RegressionModel<Model>::set_observations)                                           \
       .method("fit"             , &RegressionModel<Model>::fit             )                                           \
       .method("fitted"          , &RegressionModel<Model>::fitted          )                                           \
-      .method("f"               , &RegressionModel<Model>::f               )
+      .method("f"               , &RegressionModel<Model>::f               )                                           \
+      .method("gcvs"            , &RegressionModel<Model>::gcvs            )                                           \
+      .method("edfs"            , &RegressionModel<Model>::edfs            )                                           \
+      .method("optimum"         , &RegressionModel<Model>::optimum         ) 
 
-RCPP_MODULE(SRPDE) {
+using cpp_srpde = SRPDE;
+RCPP_MODULE(cpp_srpde) {
     Rcpp::class_<RegressionModel<models::SRPDE>>("cpp_regression").regression_rcpp_interface(models::SRPDE);
     Rcpp::class_<SRPDE>("cpp_srpde")
       .derives<RegressionModel<models::SRPDE>>("cpp_regression")
       .constructor<Rcpp::Environment, int>();
 };
 
+using cpp_gsrpde_space = GSRPDE<models::SpaceOnly>;
+RCPP_MODULE(cpp_gsrpde_space) {
+    Rcpp::class_<RegressionModel<models::GSRPDE<models::SpaceOnly>>>("cpp_regression")
+      .regression_rcpp_interface(models::GSRPDE<models::SpaceOnly>);
+    Rcpp::class_<GSRPDE<models::SpaceOnly>>("cpp_gsrpde_space")
+      .derives<RegressionModel<models::GSRPDE<models::SpaceOnly>>>("cpp_regression")
+      .constructor<Rcpp::Environment, int, int>()
+      .method("set_fpirls_tolerance", &GSRPDE<models::SpaceOnly>::set_fpirls_tolerance)
+      .method("set_fpirls_max_iter" , &GSRPDE<models::SpaceOnly>::set_fpirls_max_iter );
+};
+
+  
 }   // namespace r
 }   // namespace fdapde

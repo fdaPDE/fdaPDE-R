@@ -17,7 +17,7 @@
 pde_type <- list("laplacian" = 1, "elliptic" = 2, "parabolic" = 3)
 classify <- function(x, ...) UseMethod("classify", x)
 classify.SymbolicExpression <- function(operator) {
-  expr <- gsub("[<(.*)>\\*]?laplace\\(<(.*)>\\)|[+|-]| ", "", operator$expr)
+  expr <- gsub("<(.*)>\\*laplace\\(<(.*)>\\)|laplace\\(<(.*)>\\)|[+|-]| ", "", operator$expr)
   if (expr == "") { ## detected as simple laplacian: \mu*laplace()
     return(pde_type$laplacian)
   }
@@ -34,8 +34,21 @@ classify.SymbolicExpression <- function(operator) {
     stop("Unrecognized differential operator.")
   }
 }
+
 diff_coeff_of <- function(operator) {
   if (!is.symbolic_expression(operator)) stop("Object ", deparse(substitute(operator)), " is not a valid operator.")
+  if (classify(operator) == pde_type$laplacian) {
+      r <- regexpr("<(.*)>\\*laplace\\(<(.*)>\\)", operator$expr)
+      if (r[1] == -1) { ## special sintax for [+|-]laplacian(f)
+          if(regexpr("-laplace\\(<(.*)>\\)", operator$expr)[1] != -1) return (-1.0)
+          else return(1.0)
+      }
+      else { ## matched as [+|-] mu * laplace(f)
+          match <- regmatches(operator$expr, r)
+          return(operator$symbol_table[[substr(match, 1, 12)]])
+      }
+  }
+  ## general diffusion operator [+|-]div(K * grad(f))
   r <- regexpr("div\\(<(.*)>\\*grad\\(<(.*)>\\)\\)", operator$expr)
   if (r[1] == -1) { ## no match found
     return(NULL)
@@ -97,7 +110,7 @@ reac_coeff_of <- function(operator) {
 
       ## infer PDE type
       pde_type_ <- classify(operator)
-      ## detect PDE parameters
+      ## parse operator expression and recover PDE parameters
       pde_parameters <- list()
       K <- diff_coeff_of(operator)
       b <- tran_coeff_of(operator)
@@ -112,11 +125,8 @@ reac_coeff_of <- function(operator) {
         pde_parameters$reac <- if (is.null(c)) zero(quadrature_nodes, ncol = 1) else c(quadrature_nodes)
       } else { ## constant coefficients case
         if (is.null(K)) {
-          pde_parameters$diff <- if (pde_type_ == pde_type$laplacian) {
-            0
-          } else {
-            matrix(rep(0, times = local_dim^2), nrow = local_dim)
-          }
+          ## the laplacian case never returns NULL    
+          pde_parameters$diff <- matrix(rep(0, times = local_dim^2), nrow = local_dim)
         } else {
           if (pde_type_ == pde_type$laplacian) {
             pde_parameters$diff <- as.numeric(K)
@@ -152,7 +162,8 @@ reac_coeff_of <- function(operator) {
     dofs_coordinates = function() private$pde_$dofs_coordinates(),
     mass  = function() private$pde_$mass (),
     stiff = function() private$pde_$stiff(),
-    force = function() private$pde_$force()
+    force = function() private$pde_$force(),
+    operator = function() get_private(private$operator_)$symbolic_
   )
 )
 

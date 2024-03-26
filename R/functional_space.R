@@ -59,8 +59,8 @@
 FunctionalSpace <- function(mesh, type, ...) {
   args <- list(...)
   if (type == "fe") { ## continous galerkin elements
-    order <- ifelse("order" %in% names(args), args[["order"]], 1)
-    if(order != 1 || order != 2) stop("not supported basis order.")
+    order <- if("order" %in% names(args)) args[["order"]] else 1 ## default to linear elements
+    if(!(order == 1 || order == 2)) stop("not supported basis order.")
     cpp_backend <- new(
       eval(parse(text = paste("cpp_fe_space_lagrange",
         as.character(get_private(mesh)$local_dim_),
@@ -72,8 +72,8 @@ FunctionalSpace <- function(mesh, type, ...) {
     )
   }
   if (type == "bs") { ## BSpline basis
-    order <- ifelse("order" %in% names(args), args[["order"]], 3)
-    if(order != 3) stop("not supported basis order.")
+    order <- if("order" %in% names(args)) args[["order"]] else 3 ## default to cubic splines
+    if(!(order == 3)) stop("not supported basis order.")
     if (get_private(mesh)$local_dim_ != 1 && get_private(mesh)$embed_dim_ != 1) {
       stop(deparse(substitute(mesh)), " is not a 1D interval.")
     }
