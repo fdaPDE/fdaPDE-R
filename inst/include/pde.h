@@ -27,6 +27,7 @@
 #include "mesh.h"
 #include "utils.h"
 using fdapde::core::FEM;
+using fdapde::core::SPLINE;
 
 namespace fdapde {
 namespace r {
@@ -35,7 +36,8 @@ namespace r {
 enum pde_type {
     simple_laplacian,        // \mu * \Delta f
     second_order_elliptic,   // div(K * \nabla f) + dot(b, \nabla f) + c * f
-    second_order_parabolic   // df/dt + div(K * \nabla f) + dot(b, \nabla f) + c * f
+    second_order_parabolic,  // df/dt + div(K * \nabla f) + dot(b, \nabla f) + c * f
+    bilaplacian
 };
 
 // given a r::PDE_<M, N, R>, we can always cast to an r::PDE to recover the pde backend
@@ -115,6 +117,50 @@ template <int M, int N, int R> class PDE_ : public PDE {
     ~PDE_() = default;
 };
 
+template <int R> class PDE_Spline : public PDE {
+   private:
+    using DomainType = core::Mesh<1, 1>;
+    using QuadratureRule = core::Integrator<SPLINE, DomainType::local_dimension, R>;
+    template <typename L>
+    using PDEType = core::PDE<DomainType, L, DMatrix<double>, core::SPLINE, core::spline_order<R>>;
+    // internal data
+    DomainType domain_ {};           // triangulation
+    QuadratureRule integrator_ {};   // quadrature rule (exact for the provided fem order)
+    bool init_ = false;              // asserted true only after execution of init()
+   public:
+    // constructor
+    PDE_Spline(Rcpp::Environment r_mesh) {
+        domain_ = get_env_as<r::Mesh<1, 1>>(r_mesh)->domain();
+	auto L = -core::bilaplacian<SPLINE>(); // only bilaplacian
+	pde = PDEType<decltype(L)>(domain_, L);
+    }
+    // setters
+    void set_dirichlet_bc(const DMatrix<double>& data) { pde.set_dirichlet_bc(data); }
+    void set_forcing(const DMatrix<double>& data) { pde.set_forcing(data); }
+    // getters
+    DMatrix<double> get_quadrature_nodes() const { return integrator_.quadrature_nodes(domain_); };
+    DMatrix<double> get_dofs_coordinates() const { return pde.dof_coords(); };
+    const SpMatrix<double>& mass() const {
+        fdapde_assert(init_ == true);
+        return pde.mass();
+    }
+    const SpMatrix<double>& stiff() const {
+        fdapde_assert(init_ == true);
+        return pde.stiff();
+    }
+    const DMatrix<double>& force() const {
+        fdapde_assert(init_ == true);
+        return pde.force();
+    }
+    void init() {   // initialize internal pde status
+        pde.init();
+        init_ = true;
+    }
+    // destructor
+    ~PDE_Spline() = default;
+};
+
+  
 }   // namespace r
 }   // namespace fdapde
 

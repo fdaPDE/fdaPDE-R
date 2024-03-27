@@ -222,6 +222,7 @@ laplace <- function(op, name = NULL) {
 }
 dt <- function(op) unary_symbolic("dt", op, deparse(substitute(op)))
 inner <- function(op1, op2) binary_symbolic("inner", op1, op2, deparse(substitute(op1)), deparse(substitute(op2)))
+bilaplace <- function(op) unary_symbolic("bilaplace", op, deparse(substitute(op)))
 
 ## symbolic mathematical function
 .SymbolicFunction <- R6::R6Class("SymbolicFunction",

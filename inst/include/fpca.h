@@ -21,120 +21,94 @@
 #include <RcppEigen.h>
 // [[Rcpp::depends(RcppEigen)]]
 
-#include <fdaPDE/utils/symbols.h>
-#include <fdaPDE/models.h>
-#include <fdaPDE/splines.h>
-#include <fdaPDE/finite_elements.h>
-#include "fdaPDE/fdaPDE/models/functional/fpca.h"
+#include <fdaPDE/functional.h>
+
 #include "fdaPDE/fdaPDE/calibration/calibration_base.h"
-#include "fdaPDE/fdaPDE/calibration/off.h"
 #include "fdaPDE/fdaPDE/calibration/gcv.h"
 #include "fdaPDE/fdaPDE/calibration/kfold_cv.h"
-#include "fdaPDE/fdaPDE/models/functional/center.h"
-using fdapde::models::FPCA;
-using fdapde::models::Sampling;
-using fdapde::calibration::Calibration;
-using fdapde::core::advection;
-using fdapde::core::diffusion;
-using fdapde::core::dt;
-using fdapde::core::FEM;
-using fdapde::core::fem_order;
-using fdapde::core::Integrator;
-using fdapde::core::laplacian;
-using fdapde::core::Mesh;
-using fdapde::core::PDE;
-using fdapde::core::pde_ptr;
-using fdapde::core::reaction;
+#include "fdaPDE/fdaPDE/calibration/off.h"
+#include "fdaPDE/fdaPDE/models/functional/fpca.h"
 
+#include "pde.h"
+#include "utils.h"
 
-#include "fdaPDE/fdaPDE/models/regression/strpde.h"
-#include "fdaPDE/fdaPDE/models/sampling_design.h"
-using fdapde::models::STRPDE;
-using fdapde::models::SpaceTimeSeparable;
-using fdapde::models::SpaceTimeParabolic;
-using fdapde::models::Sampling;
+namespace fdapde {
+namespace r {
 
-
-#include "mesh.h"
-
-namespace fdapde{
-  namespace r{
-
-template <int M, int N>
-class R_FPCA {
-private:
-  pde_ptr space_pen_;
-  pde_ptr time_pen_;
-  core::BlockFrame<double, int> data_;
-  models::Sampling sampling_;
-  double lambda_D_;
-  double lambda_T_;
-  DMatrix<double> loadings_;
-  DMatrix<double> scores_;
-  std::vector<DVector<double>> lambda_grid_;
-public:
-  R_FPCA(Rcpp::Environment mesh, double a, double b, int n, int sampling_type) {
-    // recover pointer to penalty
-    using RDomainType = r::Mesh<M, N>;
-    SEXP meshptr = mesh[".pointer"];
-    RDomainType* ptr = reinterpret_cast<RDomainType*>(R_ExternalPtrAddr(meshptr));
-    core::Mesh<M, N> domain = ptr->domain();
-    // define time domain
-    core::Mesh<1,1> time_mesh(a, b, n);
-
-    sampling_ = models::Sampling(sampling_type);
-    
-    // define regularizing PDE in space
-    auto Ld = -core::laplacian<fdapde::core::FEM>();
-    DMatrix<double> u = DMatrix<double>::Zero(domain.n_elements() * 3 * time_mesh.n_nodes(), 1);
-    space_pen_ = core::PDE<core::Mesh<M, N>, decltype(Ld), DMatrix<double>, core::FEM, core::fem_order<1>>(domain, Ld, u);
-
-    // define regularizing PDE in time
-    auto Lt = -core::bilaplacian<core::SPLINE>();
-    time_pen_ = core::PDE<core::Mesh<1, 1>, decltype(Lt), DMatrix<double>, core::SPLINE, core::spline_order<3>>(time_mesh, Lt);
-  }
-  // setters
-  void set_lambda_D(double lambda_D) { lambda_D_ = lambda_D; }
-  void set_lambda_T(double lambda_T) { lambda_T_ = lambda_T; }
-  void set_observations(const DMatrix<double>& y) { data_.template insert<double>(OBSERVATIONS_BLK, y); }
-  // getters
-  DMatrix<double> loadings() const { return loadings_; }
-  DMatrix<double> scores() const { return scores_; }
-
-  void set_lambda_grid(const std::vector<double>& lambda_s, const std::vector<double>& lambda_t) {
-    for(int i = 0; i < lambda_s.size(); ++i) {
-      lambda_grid_.push_back(SVector<2>(lambda_s[i], lambda_t[i]));
+template <typename RegularizationType> class FPCA {
+   private:
+    using DataContainer = BlockFrame<double, int>;
+    using ModelType = models::FPCA<RegularizationType>;
+    ModelType model_;
+    DataContainer data_;
+   public:
+    // space-only
+    FPCA(Rcpp::Environment r_env, int sampling_type)
+    requires(models::is_space_only<ModelType>::value) {
+        model_ = ModelType(
+          get_env_as<r::PDE>(r_env)->pde, Sampling(sampling_type),
+          models::RegularizedSVD<fdapde::sequential> {Calibration::off});
     }
-  }
+    // space-time separable
+    FPCA(Rcpp::Environment r_env1, Rcpp::Environment r_env2, int sampling_type)
+    requires(models::is_space_time_separable<ModelType>::value) {
+        model_ = ModelType(
+          get_env_as<r::PDE>(r_env1)->pde, get_env_as<r::PDE>(r_env2)->pde, Sampling(sampling_type),
+          models::RegularizedSVD<fdapde::sequential> {Calibration::off});
+    }
 
-  // DMatrix<double> center(const DMatrix<double>& X, double lambda_D, double lambda_T) {
-  // auto centered_data =
-  //   models::center(X, fdapde::models::STRPDE<models::SpaceTimeSeparable, fdapde::monolithic> (space_pen_, time_pen_ sampling_),
-  // 		   fdapde::calibration::Off {}(SVector<2>(lambda_D, lambda_T)));
-  // return centered_data.fitted;
-  // }
+    void fit(const Rcpp::List& r_input) {
+        // set desired resolution strategy
+        if (r_input["solver"] == "monolithic") {
+            model_.set_solver(models::RegularizedSVD<fdapde::monolithic>());
+            model_.set_lambda(Rcpp::as<DVector<double>>(r_input["lambda"]));
+        } else {
+            double tolerance = Rcpp::as<double>(r_input["tolerance"]);
+            int max_iter     = Rcpp::as<int>(r_input["max_iter"]);
+            // configure calibration strategy
+            std::string calibration = r_input["calibration"];
+            if (calibration == "off") {
+                models::RegularizedSVD<fdapde::sequential> rsvd(Calibration::off);
+                rsvd.set_tolerance(tolerance);
+                rsvd.set_max_iter(max_iter);
+                model_.set_solver(rsvd);
+                model_.set_lambda(Rcpp::as<DVector<double>>(r_input["lambda"]));
+            }
+            if (calibration == "gcv") {
+                models::RegularizedSVD<fdapde::sequential> rsvd(Calibration::gcv);
+                rsvd.set_tolerance(tolerance);
+                rsvd.set_max_iter(max_iter);
+                rsvd.set_seed(Rcpp::as<int>(r_input["seed"]));
+                rsvd.set_lambda(Rcpp::as<DMatrix<double>>(r_input["lambda"]));
+                model_.set_solver(rsvd);
+            }
+            if (calibration == "kcv") {
+                models::RegularizedSVD<fdapde::sequential> rsvd(Calibration::kcv);
+                rsvd.set_tolerance(tolerance);
+                rsvd.set_max_iter(max_iter);
+                rsvd.set_seed(Rcpp::as<int>(r_input["seed"]));
+                rsvd.set_nfolds(Rcpp::as<int>(r_input["n_folds"]));
+                rsvd.set_lambda(Rcpp::as<DMatrix<double>>(r_input["lambda"]));
+                model_.set_solver(rsvd);
+            }
+        }
+        // set number of components
+        model_.set_npc(Rcpp::as<int>(r_input["ncomp"]));
+        model_.set_data(data_);
+        model_.init();
+        model_.solve();
+    }
+    // getters
+    const DMatrix<double>& loadings() const { return model_.loadings(); }
+    const DMatrix<double>& scores() const { return model_.scores(); }
+    // setters
+    void set_observations(const DMatrix<double>& y) { data_.template insert<double>(OBSERVATIONS_BLK, y); }
 
-  
-  // utilities
-  void solve() {
-
-    models::FPCA<models::SpaceTimeSeparable> model(space_pen_, time_pen_, sampling_, models::RegularizedSVD<fdapde::sequential> {Calibration::off});
-
-    // RegularizedSVD<fdapde::sequential> rsvd(Calibration::gcv);
-    // rsvd.set_lambda(lambda_grid_);
-    // rsvd.set_seed(78965);   // for reproducibility purposes in testing
-    // models::FPCA<models::SpaceTimeSeparable> model(space_pen, time_pen_, sampling_, rsvd);
-    
-  model.set_lambda_D(lambda_D_);
-  model.set_lambda_T(lambda_T_);
-  model.set_data(data_);
-  model.init();
-  model.solve();
-  loadings_ = model.loadings();
-  scores_ = model.scores();
-  }
+    // destructor
+    ~FPCA() = default;
 };
 
-  }}
-    
-#endif // __R_FPCA_H__
+}   // namespace r
+}   // namespace fdapde
+
+#endif   // __R_FPCA_H__

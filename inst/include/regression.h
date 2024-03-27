@@ -24,8 +24,6 @@
 #include <fdaPDE/optimization.h>
 #include <fdaPDE/regression.h>
 
-#include <variant>
-
 #include "fdaPDE/fdaPDE/calibration/gcv.h"
 #include "fdaPDE/fdaPDE/calibration/kfold_cv.h"
 #include "fdaPDE/fdaPDE/calibration/rmse.h"

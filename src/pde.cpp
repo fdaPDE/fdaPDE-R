@@ -31,18 +31,32 @@ namespace r {
       .method("set_initial_condition", &PDE_<LocalDim, EmbedDim, Order>::set_initial_condition)                        \
       .method("init"                 , &PDE_<LocalDim, EmbedDim, Order>::init                 )
 
-using cpp_pde_2_2_1 = PDE_<2, 2, 1>;
-RCPP_MODULE(cpp_pde_2_2_1) { Rcpp::class_<PDE_<2, 2, 1>>("cpp_pde_2_2_1").pde_rcpp_interface(2, 2, 1); }
+using cpp_pde_fe_2_2_1 = PDE_<2, 2, 1>;
+RCPP_MODULE(cpp_pde_fe_2_2_1) { Rcpp::class_<PDE_<2, 2, 1>>("cpp_pde_fe_2_2_1").pde_rcpp_interface(2, 2, 1); }
 // using cpp_pde_2_2_2 = PDE_<2, 2, 2>;
 // RCPP_MODULE(cpp_pde_2_2_2) { Rcpp::class_<PDE_<2, 2, 2>>("cpp_pde_2_2_2").pde_rcpp_interface(2, 2, 2); }
 // using cpp_pde_2_3_1 = PDE_<2, 3, 1>;
 // RCPP_MODULE(cpp_pde_2_3_1) { Rcpp::class_<PDE_<2, 3, 1>>("cpp_pde_2_3_1").pde_rcpp_interface(2, 3, 1); }
 // using cpp_pde_2_3_2 = PDE_<2, 3, 2>;
 // RCPP_MODULE(cpp_pde_2_3_2) { Rcpp::class_<PDE_<2, 3, 2>>("cpp_pde_2_3_2").pde_rcpp_interface(2, 3, 2); }
-using cpp_pde_3_3_1 = PDE_<3, 3, 1>;
-RCPP_MODULE(cpp_pde_3_3_1) { Rcpp::class_<PDE_<3, 3, 1>>("cpp_pde_3_3_1").pde_rcpp_interface(3, 3, 1); }
+using cpp_pde_fe_3_3_1 = PDE_<3, 3, 1>;
+RCPP_MODULE(cpp_pde_fe_3_3_1) { Rcpp::class_<PDE_<3, 3, 1>>("cpp_pde_fe_3_3_1").pde_rcpp_interface(3, 3, 1); }
 // using cpp_pde_3_3_2 = PDE_<3, 3, 2>;
 // RCPP_MODULE(cpp_pde_3_3_2) { Rcpp::class_<PDE_<3, 3, 2>>("cpp_pde_3_3_2").pde_rcpp_interface(3, 3, 2); }
 
+using cpp_pde_bs_1_1_3 = PDE_Spline<3>;
+RCPP_MODULE(cpp_pde_bs_1_1_3) {
+  Rcpp::class_<PDE_Spline<3>>("cpp_pde_bs_1_1_3")
+      .constructor<Rcpp::Environment>()
+      .method("get_quadrature_nodes" , &PDE_Spline<3>::get_quadrature_nodes )
+      .method("get_dofs_coordinates" , &PDE_Spline<3>::get_dofs_coordinates )
+      .method("mass"                 , &PDE_Spline<3>::mass                 )
+      .method("stiff"                , &PDE_Spline<3>::stiff                )
+      .method("force"                , &PDE_Spline<3>::force                )
+      .method("set_dirichlet_bc"     , &PDE_Spline<3>::set_dirichlet_bc     )
+      .method("set_forcing"          , &PDE_Spline<3>::set_forcing          )
+      .method("init"                 , &PDE_Spline<3>::init                 );
+}
+  
 }   // namespace r
 }   // namespace fdapde

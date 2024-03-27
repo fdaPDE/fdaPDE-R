@@ -38,15 +38,17 @@ classify.SymbolicExpression <- function(operator) {
 diff_coeff_of <- function(operator) {
   if (!is.symbolic_expression(operator)) stop("Object ", deparse(substitute(operator)), " is not a valid operator.")
   if (classify(operator) == pde_type$laplacian) {
-      r <- regexpr("<(.*)>\\*laplace\\(<(.*)>\\)", operator$expr)
-      if (r[1] == -1) { ## special sintax for [+|-]laplacian(f)
-          if(regexpr("-laplace\\(<(.*)>\\)", operator$expr)[1] != -1) return (-1.0)
-          else return(1.0)
+    r <- regexpr("<(.*)>\\*laplace\\(<(.*)>\\)", operator$expr)
+    if (r[1] == -1) { ## special sintax for [+|-]laplacian(f)
+      if (regexpr("-laplace\\(<(.*)>\\)", operator$expr)[1] != -1) {
+        return(-1.0)
+      } else {
+        return(1.0)
       }
-      else { ## matched as [+|-] mu * laplace(f)
-          match <- regmatches(operator$expr, r)
-          return(operator$symbol_table[[substr(match, 1, 12)]])
-      }
+    } else { ## matched as [+|-] mu * laplace(f)
+      match <- regmatches(operator$expr, r)
+      return(operator$symbol_table[[substr(match, 1, 12)]])
+    }
   }
   ## general diffusion operator [+|-]div(K * grad(f))
   r <- regexpr("div\\(<(.*)>\\*grad\\(<(.*)>\\)\\)", operator$expr)
@@ -108,59 +110,68 @@ reac_coeff_of <- function(operator) {
       local_dim <- mesh$local_dim
       embed_dim <- mesh$embed_dim
 
-      ## infer PDE type
-      pde_type_ <- classify(operator)
-      ## parse operator expression and recover PDE parameters
-      pde_parameters <- list()
-      K <- diff_coeff_of(operator)
-      b <- tran_coeff_of(operator)
-      c <- reac_coeff_of(operator)
-      space_varying <- FALSE
-      if (is.function(K) || is.function(b) || is.function(c)) {
-        space_varying <- TRUE
-        zero <- function(nodes, ncol = 1) matrix(rep(0, times = nrow(nodes) * ncol), ncol = ncol)
-        ## if any of the parameters is a function, the problem is considered space-varying
-        pde_parameters$diff <- if (is.null(K)) zero(quadrature_nodes, ncol = local_dim^2) else K(quadrature_nodes)
-        pde_parameters$tran <- if (is.null(b)) zero(quadrature_nodes, ncol = local_dim) else b(quadrature_nodes)
-        pde_parameters$reac <- if (is.null(c)) zero(quadrature_nodes, ncol = 1) else c(quadrature_nodes)
-      } else { ## constant coefficients case
-        if (is.null(K)) {
-          ## the laplacian case never returns NULL    
-          pde_parameters$diff <- matrix(rep(0, times = local_dim^2), nrow = local_dim)
-        } else {
-          if (pde_type_ == pde_type$laplacian) {
-            pde_parameters$diff <- as.numeric(K)
+      if (functional_space$type == "fe") {
+        ## infer PDE type
+        pde_type_ <- classify(operator)
+        ## parse operator expression and recover PDE parameters
+        pde_parameters <- list()
+        K <- diff_coeff_of(operator)
+        b <- tran_coeff_of(operator)
+        c <- reac_coeff_of(operator)
+        space_varying <- FALSE
+        if (is.function(K) || is.function(b) || is.function(c)) {
+          space_varying <- TRUE
+          zero <- function(nodes, ncol = 1) matrix(rep(0, times = nrow(nodes) * ncol), ncol = ncol)
+          ## if any of the parameters is a function, the problem is considered space-varying
+          pde_parameters$diff <- if (is.null(K)) zero(quadrature_nodes, ncol = local_dim^2) else K(quadrature_nodes)
+          pde_parameters$tran <- if (is.null(b)) zero(quadrature_nodes, ncol = local_dim) else b(quadrature_nodes)
+          pde_parameters$reac <- if (is.null(c)) zero(quadrature_nodes, ncol = 1) else c(quadrature_nodes)
+        } else { ## constant coefficients case
+          if (is.null(K)) {
+            ## the laplacian case never returns NULL
+            pde_parameters$diff <- matrix(rep(0, times = local_dim^2), nrow = local_dim)
           } else {
-            pde_parameters$diff <- if (is(K, "numeric")) { ## case -div(\mu*grad(f)), with \mu \in \mathbb{R}
-              K * matrix(c(1, 0, 0, 1), nrow = local_dim, ncol = local_dim, byrow = T) 
-            } else { ## general diffusion tensor
-              as.matrix(K)
+            if (pde_type_ == pde_type$laplacian) {
+              pde_parameters$diff <- as.numeric(K)
+            } else {
+              pde_parameters$diff <- if (is(K, "numeric")) { ## case -div(\mu*grad(f)), with \mu \in \mathbb{R}
+                K * matrix(c(1, 0, 0, 1), nrow = local_dim, ncol = local_dim, byrow = T)
+              } else { ## general diffusion tensor
+                as.matrix(K)
+              }
             }
           }
+          pde_parameters$tran <- if (is.null(b)) {
+            matrix(rep(0, times = local_dim), nrow = local_dim, ncol = 1)
+          } else {
+            matrix(b, nrow = local_dim, ncol = 1)
+          }
+          pde_parameters$reac <- if (is.null(c)) 0.0 else as.numeric(c)
         }
-        pde_parameters$tran <- if (is.null(b)) {
-          matrix(rep(0, times = local_dim), nrow = local_dim, ncol = 1)
-        } else {
-          matrix(b, nrow = local_dim, ncol = 1)
-        }
-        pde_parameters$reac <- if (is.null(c)) 0.0 else as.numeric(c)
+        ## create cpp backend
+        private$pde_ <- new(
+          eval(parse(text = paste("cpp", "pde", "fe", local_dim, embed_dim, order, sep = "_"))),
+          get_private(mesh)$mesh_,
+          cpp_aligned_index(pde_type_),
+          pde_parameters
+        )
+      }
+      if (functional_space$type == "bs") {
+        ## only bilaplacian
+        private$pde_ <- new(
+          eval(parse(text = paste("cpp", "pde", "bs", local_dim, embed_dim, order, sep = "_"))),
+          get_private(mesh)$mesh_
+        )          
       }
       ## evaluate forcing function
       u <- as.matrix(force(quadrature_nodes))
-      ## create cpp backend
-      private$pde_ <- new(
-        eval(parse(text = paste("cpp", "pde", local_dim, embed_dim, order, sep = "_"))),
-        get_private(mesh)$mesh_,
-        cpp_aligned_index(pde_type_),
-        pde_parameters
-      )
       private$pde_$set_forcing(u)
     },
     init = function() private$pde_$init()
   ),
   active = list(
     dofs_coordinates = function() private$pde_$dofs_coordinates(),
-    mass  = function() private$pde_$mass (),
+    mass = function() private$pde_$mass(),
     stiff = function() private$pde_$stiff(),
     force = function() private$pde_$force(),
     operator = function() get_private(private$operator_)$symbolic_

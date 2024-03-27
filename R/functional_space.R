@@ -18,9 +18,10 @@
 #' @export
 .FunctionalSpace <- R6::R6Class("FunctionalSpace",
   private = list(
-    basis_ = "ANY",
+    basis_ = NULL,
     mesh_  = "Mesh",
     order_ = numeric(),
+    type_  = character(),
     integrate = function(f) {
       if (!is.function(f) && !is.vector(f)) {
           stop("object", deparse(substitute(f)), "is neither a function nor an expansion coefficient vector.")
@@ -36,10 +37,11 @@
     }
   ),
   public = list(
-    initialize = function(basis = NA, mesh = NA, order = NA) {
+    initialize = function(basis = NA, mesh = NA, type = NA, order = NA) {
         private$basis_ <- basis
         private$mesh_  <- mesh
         private$order_ <- order
+        private$type_  <- type
     },
     ## evaluates the basis system on a given set of locations
     eval = function(locations, type = c("pointwise", "areal")) {
@@ -51,7 +53,8 @@
   active = list(
     size  = function() private$basis_$size(),
     mesh  = function() private$mesh_,
-    order = function() private$order_
+    order = function() private$order_,
+    type  = function() private$type_
   )
 )
 
@@ -82,6 +85,7 @@ FunctionalSpace <- function(mesh, type, ...) {
   .FunctionalSpace$new(
     basis = cpp_backend,
     mesh  = mesh,
+    type  = type,
     order = order
   )
 }
@@ -110,7 +114,9 @@ FunctionalSpace <- function(mesh, type, ...) {
   ),
   active = list(
     lhs_mesh = function() private$lhs_basis_$mesh,
-    rhs_mesh = function() private$rhs_basis_$mesh      
+    rhs_mesh = function() private$rhs_basis_$mesh,
+    lhs = function() private$lhs_basis_,
+    rhs = function() private$rhs_basis_
   )
 )
 
@@ -118,7 +124,7 @@ FunctionalSpace <- function(mesh, type, ...) {
 `%X%` <- function(x, ...) { UseMethod("%X%", x) }
 
 #' @export
-`%X%.FunctionalSpace` <- function(rhs, lhs){
-    if(!inherits(lhs, "FunctionalSpace")) stop(deparse(substitute(lhs)), ": not a FunctionalSpace object.")
+`%X%.FunctionalSpace` <- function(lhs, rhs){
+    if(!inherits(rhs, "FunctionalSpace")) stop(deparse(substitute(rhs)), ": not a FunctionalSpace object.")
     return(.TensorProductSpace$new(lhs, rhs))
 }

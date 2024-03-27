@@ -86,7 +86,7 @@ MeshInterval <- function(a, b, n = NULL, by = NULL) {
 
 #' @export
 MeshUnitInterval <- function(n = NULL, by = NULL) {
-  return(IntervalMesh(0, 1, n))
+  return(MeshInterval(0, 1, n))
 }
 
 #' @export
