@@ -20,25 +20,51 @@
 
 namespace fdapde {
 namespace r {
-  
-#define mesh_rcpp_interface(LocalDim, EmbedDim)                                                                        \
-       constructor<Rcpp::List>()                                                                                       \
-      .method("nodes"    , &Mesh<LocalDim, EmbedDim>::nodes    )                                                       \
-      .method("elements" , &Mesh<LocalDim, EmbedDim>::elements )                                                       \
-      .method("neighbors", &Mesh<LocalDim, EmbedDim>::neighbors)                                                       \
-      .method("boundary" , &Mesh<LocalDim, EmbedDim>::boundary )                                                       \
-      .method("locate"   , &Mesh<LocalDim, EmbedDim>::locate   )
 
-using cpp_mesh_1_1 = Mesh<1, 1>;
-RCPP_MODULE(cpp_mesh_1_1) { Rcpp::class_<Mesh<1, 1>>("cpp_mesh_1_1").mesh_rcpp_interface(1, 1); }
-using cpp_mesh_1_2 = Mesh<1, 2>;
-RCPP_MODULE(cpp_mesh_1_2) { Rcpp::class_<Mesh<1, 2>>("cpp_mesh_1_2").mesh_rcpp_interface(1, 2); }
-using cpp_mesh_2_2 = Mesh<2, 2>;
-RCPP_MODULE(cpp_mesh_2_2) { Rcpp::class_<Mesh<2, 2>>("cpp_mesh_2_2").mesh_rcpp_interface(2, 2); }
-using cpp_mesh_2_3 = Mesh<2, 3>;
-RCPP_MODULE(cpp_mesh_2_3) { Rcpp::class_<Mesh<2, 3>>("cpp_mesh_2_3").mesh_rcpp_interface(2, 3); }
-using cpp_mesh_3_3 = Mesh<3, 3>;
-RCPP_MODULE(cpp_mesh_3_3) { Rcpp::class_<Mesh<3, 3>>("cpp_mesh_3_3").mesh_rcpp_interface(3, 3); }
+// clang-format off
+  
+#define triangulation_rcpp_interface(LocalDim, EmbedDim)                                                               \
+       method("nodes"                 , &TriangulationBase<LocalDim, EmbedDim>::nodes                 )                \
+      .method("cells"                 , &TriangulationBase<LocalDim, EmbedDim>::cells                 )                \
+      .method("boundary_nodes"        , &TriangulationBase<LocalDim, EmbedDim>::boundary_nodes        )                \
+      .method("n_nodes"               , &TriangulationBase<LocalDim, EmbedDim>::n_nodes               )                \
+      .method("n_cells"               , &TriangulationBase<LocalDim, EmbedDim>::n_cells               )                \
+      .method("n_boundary_nodes"      , &TriangulationBase<LocalDim, EmbedDim>::n_boundary_nodes      )                \
+      .method("bbox"                  , &TriangulationBase<LocalDim, EmbedDim>::bbox                  )                \
+      .method("measure"               , &TriangulationBase<LocalDim, EmbedDim>::measure               )                \
+      .method("marked_measure"        , &TriangulationBase<LocalDim, EmbedDim>::marked_measure        )                \
+      .method("sample"                , &TriangulationBase<LocalDim, EmbedDim>::sample                )                \
+      .method("mark_cells"            , &TriangulationBase<LocalDim, EmbedDim>::mark_cells            )                \
+      .method("cells_markers"         , &TriangulationBase<LocalDim, EmbedDim>::cells_markers         )                \
+      .method("clear_cells_markers"   , &TriangulationBase<LocalDim, EmbedDim>::clear_cells_markers   )                \
+      .method("filter_cells_by_marker", &TriangulationBase<LocalDim, EmbedDim>::filter_cells_by_marker)                \
+      .method("cell_coords"           , &TriangulationBase<LocalDim, EmbedDim>::cell_coords           )                \
+      .method("cell_measure"          , &TriangulationBase<LocalDim, EmbedDim>::cell_measure          )                \
+      .method("cell_bbox"             , &TriangulationBase<LocalDim, EmbedDim>::cell_bbox             )                \
+      .method("cell_barycenter"       , &TriangulationBase<LocalDim, EmbedDim>::cell_barycenter       )                \
+      .method("cell_circumcenter"     , &TriangulationBase<LocalDim, EmbedDim>::cell_circumcenter     )                \
+      .method("cell_diameter"         , &TriangulationBase<LocalDim, EmbedDim>::cell_diameter         )
+  
+using cpp_triangulation_2_2 = Triangulation<2, 2>;
+RCPP_MODULE(cpp_triangulation_2_2) {
+    Rcpp::class_<TriangulationBase<2, 2>>("cpp_triangulation_base").triangulation_rcpp_interface(2, 2);
+    Rcpp::class_<Triangulation<2, 2>>("cpp_triangulation_2_2")
+      .derives<TriangulationBase<2, 2>>("cpp_triangulation_base")
+      .constructor<Rcpp::List>()
+      .method("neighbors"                , &Triangulation<2, 2>::neighbors                )
+      .method("edges"                    , &Triangulation<2, 2>::edges                    )
+      .method("n_edges"                  , &Triangulation<2, 2>::n_edges                  )
+      .method("n_boundary_edges"         , &Triangulation<2, 2>::n_boundary_edges         )
+      .method("boundary_edges"           , &Triangulation<2, 2>::boundary_edges           )
+      .method("mark_boundary"            , &Triangulation<2, 2>::mark_boundary            )
+      .method("edges_markers"            , &Triangulation<2, 2>::edges_markers            )
+      .method("clear_boundary_markers"   , &Triangulation<2, 2>::clear_boundary_markers   )
+      .method("filter_boundary_by_marker", &Triangulation<2, 2>::filter_boundary_by_marker)
+      .method("edge_coords"              , &Triangulation<2, 2>::edge_coords              )
+      .method("locate"                   , &Triangulation<2, 2>::locate                   );
+}
+
+// clang-format on
 
 }   // namespace r
 }   // namespace fdapde

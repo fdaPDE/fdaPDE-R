@@ -14,12 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <RcppEigen.h>
-// [[Rcpp::depends(RcppEigen)]]
-#include <fdaPDE/linear_algebra.h>
-  
-// [[Rcpp::export]]
-Eigen::SparseMatrix<double>
-kronecker_tensor_product(const Eigen::SparseMatrix<double>& lhs, const Eigen::SparseMatrix<double>& rhs) {
-    return Eigen::SparseMatrix<double>(fdapde::core::Kronecker(lhs, rhs));
+#ifndef __R_UTILITY_H__
+#define __R_UTILITY_H__
+
+namespace fdapde {
+namespace r {
+
+template <typename T> const T& get_env_as(const Rcpp::Environment& r_env) {
+    SEXP pde_ptr = r_env[".pointer"];
+    return *reinterpret_cast<T*>(R_ExternalPtrAddr(pde_ptr));
 }
+
+}   // namespace r
+}   // namespace fdapde
+
+#endif   // __R_UTILITY_H__

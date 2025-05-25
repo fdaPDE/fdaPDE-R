@@ -11,54 +11,13 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// kronecker_tensor_product
-Eigen::SparseMatrix<double> kronecker_tensor_product(const Eigen::SparseMatrix<double>& lhs, const Eigen::SparseMatrix<double>& rhs);
-RcppExport SEXP _fdaPDE2_kronecker_tensor_product(SEXP lhsSEXP, SEXP rhsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::SparseMatrix<double>& >::type lhs(lhsSEXP);
-    Rcpp::traits::input_parameter< const Eigen::SparseMatrix<double>& >::type rhs(rhsSEXP);
-    rcpp_result_gen = Rcpp::wrap(kronecker_tensor_product(lhs, rhs));
-    return rcpp_result_gen;
-END_RCPP
-}
 
-RcppExport SEXP _rcpp_module_boot_cpp_fpca_space();
-RcppExport SEXP _rcpp_module_boot_cpp_fpca_spacetime();
-RcppExport SEXP _rcpp_module_boot_cpp_fe_space_lagrange_2_2_1();
-RcppExport SEXP _rcpp_module_boot_cpp_fe_space_lagrange_2_3_1();
-RcppExport SEXP _rcpp_module_boot_cpp_fe_space_lagrange_3_3_1();
-RcppExport SEXP _rcpp_module_boot_cpp_bspline_space();
-RcppExport SEXP _rcpp_module_boot_cpp_mesh_1_1();
-RcppExport SEXP _rcpp_module_boot_cpp_mesh_1_2();
-RcppExport SEXP _rcpp_module_boot_cpp_mesh_2_2();
-RcppExport SEXP _rcpp_module_boot_cpp_mesh_2_3();
-RcppExport SEXP _rcpp_module_boot_cpp_mesh_3_3();
-RcppExport SEXP _rcpp_module_boot_cpp_pde_fe_2_2_1();
-RcppExport SEXP _rcpp_module_boot_cpp_pde_fe_3_3_1();
-RcppExport SEXP _rcpp_module_boot_cpp_pde_bs_1_1_3();
-RcppExport SEXP _rcpp_module_boot_cpp_srpde();
-RcppExport SEXP _rcpp_module_boot_cpp_gsrpde_space();
+RcppExport SEXP _rcpp_module_boot_cpp_fe_function_2_2_p1();
+RcppExport SEXP _rcpp_module_boot_cpp_triangulation_2_2();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_fdaPDE2_kronecker_tensor_product", (DL_FUNC) &_fdaPDE2_kronecker_tensor_product, 2},
-    {"_rcpp_module_boot_cpp_fpca_space", (DL_FUNC) &_rcpp_module_boot_cpp_fpca_space, 0},
-    {"_rcpp_module_boot_cpp_fpca_spacetime", (DL_FUNC) &_rcpp_module_boot_cpp_fpca_spacetime, 0},
-    {"_rcpp_module_boot_cpp_fe_space_lagrange_2_2_1", (DL_FUNC) &_rcpp_module_boot_cpp_fe_space_lagrange_2_2_1, 0},
-    {"_rcpp_module_boot_cpp_fe_space_lagrange_2_3_1", (DL_FUNC) &_rcpp_module_boot_cpp_fe_space_lagrange_2_3_1, 0},
-    {"_rcpp_module_boot_cpp_fe_space_lagrange_3_3_1", (DL_FUNC) &_rcpp_module_boot_cpp_fe_space_lagrange_3_3_1, 0},
-    {"_rcpp_module_boot_cpp_bspline_space", (DL_FUNC) &_rcpp_module_boot_cpp_bspline_space, 0},
-    {"_rcpp_module_boot_cpp_mesh_1_1", (DL_FUNC) &_rcpp_module_boot_cpp_mesh_1_1, 0},
-    {"_rcpp_module_boot_cpp_mesh_1_2", (DL_FUNC) &_rcpp_module_boot_cpp_mesh_1_2, 0},
-    {"_rcpp_module_boot_cpp_mesh_2_2", (DL_FUNC) &_rcpp_module_boot_cpp_mesh_2_2, 0},
-    {"_rcpp_module_boot_cpp_mesh_2_3", (DL_FUNC) &_rcpp_module_boot_cpp_mesh_2_3, 0},
-    {"_rcpp_module_boot_cpp_mesh_3_3", (DL_FUNC) &_rcpp_module_boot_cpp_mesh_3_3, 0},
-    {"_rcpp_module_boot_cpp_pde_fe_2_2_1", (DL_FUNC) &_rcpp_module_boot_cpp_pde_fe_2_2_1, 0},
-    {"_rcpp_module_boot_cpp_pde_fe_3_3_1", (DL_FUNC) &_rcpp_module_boot_cpp_pde_fe_3_3_1, 0},
-    {"_rcpp_module_boot_cpp_pde_bs_1_1_3", (DL_FUNC) &_rcpp_module_boot_cpp_pde_bs_1_1_3, 0},
-    {"_rcpp_module_boot_cpp_srpde", (DL_FUNC) &_rcpp_module_boot_cpp_srpde, 0},
-    {"_rcpp_module_boot_cpp_gsrpde_space", (DL_FUNC) &_rcpp_module_boot_cpp_gsrpde_space, 0},
+    {"_rcpp_module_boot_cpp_fe_function_2_2_p1", (DL_FUNC) &_rcpp_module_boot_cpp_fe_function_2_2_p1, 0},
+    {"_rcpp_module_boot_cpp_triangulation_2_2", (DL_FUNC) &_rcpp_module_boot_cpp_triangulation_2_2, 0},
     {NULL, NULL, 0}
 };
 

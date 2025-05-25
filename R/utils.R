@@ -26,3 +26,12 @@ set_private <- function(x, attribute, value) {
     if(!inherits(x, "R6")) stop(deparse(substitute(x)), ": not an R6 class")
     invisible(x$.__enclos_env__$private[[attribute]] <- value)
 }
+
+fdapde_assert <- function(predicate, msg) {
+    if(!predicate) {
+        cat(paste0("Assert '", deparse(substitute(predicate)), "' failed: ", msg, "\n"))
+        opt <- options(show.error.messages = FALSE)
+        on.exit(options(opt))
+        stop()
+    }
+}

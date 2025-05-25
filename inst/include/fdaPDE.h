@@ -17,8 +17,7 @@
 #ifndef __FDAPDE_R_SYMBOLS_INCLUDE__
 #define __FDAPDE_R_SYMBOLS_INCLUDE__
 
-// make fdaPDE-core and fdaPDE-cpp symbols visibile to Rcpp
-#include <fdaPDE/core.h>
-#include <fdaPDE/fdapde.h>
+// make fdaPDE visibile to Rcpp
+#include <fdaPDE/models.h>
 
 #endif // __FDAPDE_R_SYMBOLS_INCLUDE__
