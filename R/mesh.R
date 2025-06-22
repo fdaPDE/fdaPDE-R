@@ -30,6 +30,7 @@
       private$embed_dim_ <- embed_dim
     },
     locate = function(locations) {
+      fdapde_assert(dim(locations)[1] > 0 && dim(locations)[2] == private$embed_dim_, "wrong matrix dimensions.")
       return(r_aligned_index(private$mesh_$locate(as.matrix(locations))))
     },
     sample = function(n_samples, seed = NULL) {
@@ -84,11 +85,11 @@
   ),
   active = list(
     nodes = function() private$mesh_$nodes(),
-    cells = function() r_aligned_index(private$mesh_$elements()),
+    cells = function() r_aligned_index(private$mesh_$cells()),
     edges = function() r_aligned_index(private$mesh_$edges()),
     neighbors = function() {
       neigh_ <- r_aligned_index(private$mesh_$neighbors())
-      neigh_[neigh_ == 0] <- NULL ## signal missing neighbor with NULL
+      neigh_[which(neigh_ == 0)] <- NA ## signal missing neighbor with NULL
       return(neigh_)
     },
     ## boundary
@@ -105,7 +106,7 @@
     embed_dim = function() private$embed_dim_,
     ## utilities
     bbox = function() private$mesh_$bbox(),
-    measure = function() private$mesh_$measure(),
+    area = function() private$mesh_$measure(),
     cells_markers = function() private$mesh_$cells_markers(),
     edges_markers = function() private$mesh_$edges_markers()
   )

@@ -72,7 +72,7 @@ template <int LocalDim, int EmbedDim> class TriangulationBase {
     // all indices of cells having marker = m
     std::vector<int> filter_cells_by_marker(int m) const {
         std::vector<int> cell_ids;
-        if (triangulation_.cells_markers().size() != 0) { // -------------- remove
+        if (!triangulation_.cells_markers().empty()) {
             for (int i = 0, n = triangulation_.n_cells(); i < n; ++i) {
                 if (triangulation_.cells_markers()[i] == m) { cell_ids.push_back(i); }
             }
@@ -137,7 +137,7 @@ template <int EmbedDim> class Triangulation<2, EmbedDim> : public TriangulationB
     // all indices of boundary edges having marker = m
     std::vector<int> filter_boundary_by_marker(int m) const {
         std::vector<int> edge_ids;
-        if (triangulation_.edges_markers().size() != 0) { // ------------- remove	  
+        if (!triangulation_.edges_markers().empty()) {
             for (int i = 0, n = triangulation_.n_edges(); i < n; ++i) {
                 if (triangulation_.is_edge_on_boundary(i) && triangulation_.edges_markers()[i] == m) {
                     edge_ids.push_back(i);

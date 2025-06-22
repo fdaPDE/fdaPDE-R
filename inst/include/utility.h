@@ -20,11 +20,11 @@
 namespace fdapde {
 namespace r {
 
-template <typename T> const T& get_env_as(const Rcpp::Environment& r_env) {
+template <typename T> T& get_env_as(const Rcpp::Environment& r_env) {
     SEXP pde_ptr = r_env[".pointer"];
     return *reinterpret_cast<T*>(R_ExternalPtrAddr(pde_ptr));
 }
-
+  
 }   // namespace r
 }   // namespace fdapde
 
