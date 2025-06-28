@@ -88,14 +88,14 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
         if (private$layer_map_[[layer_name]] == "areal") invisible(.areal_layer$new(self, layer_name))
         if (private$layer_map_[[layer_name]] == "point") invisible(.point_layer$new(self, layer_name))
     },
-    `[<-` = function(layer_name, rows, cols, val) {
-      if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
-      if (private$layer_map_[[layer_name]] == "areal") {
-        layer <- .areal_layer$new(self, layer_name)
-        layer[rows, cols] <- val
-        invisible(self)
-      }
-    },
+    ## `[<-` = function(layer_name, rows, cols, val) {
+    ##   if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
+    ##   if (private$layer_map_[[layer_name]] == "areal") {
+    ##     layer <- .areal_layer$new(self, layer_name)
+    ##     layer[rows, cols] <- val
+    ##     invisible(self)
+    ##   }
+    ## },
     rows = function(layer_name) {
       private$geoframe_$rows(layer_name)
     },
@@ -217,7 +217,7 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
       cat("\n")
       for (i in seq(from = 3, to = (2 + length(rows)))) {
         for (j in seq(from = 1, to = length(colnames))) {
-          cat(output[[j]][i])
+          cat(format(output[[j]][i], digits = 6))
         }
         cat("\n")
       }
@@ -362,13 +362,24 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
       if (ctype == data_t$str)   private$geoframe_handler()$str_assign  (layer_name_, rows, cols, as.character(vals))
       invisible(self)
     },
-    plot = function() {
+    plot = function(covs = NULL, mesh = TRUE, ...) {
       coords = private$geoframe_handler()$point_coordinates(private$layer_name_)  
       x_range <- range(coords[, 1])
       y_range <- range(coords[, 2])
 
+      par(mar = c(1, 1, 1, 1))
       plot(private$geoframe_$.__enclos_env__$private$triangulation_)
-      points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = "red", pch = 19, cex = 1)
+      if (is.null(covs)) {
+          points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = "red", pch = 21, cex = 1)
+      } else {
+          n_col <- 50
+          palette <- colorRampPalette(colors = c("lightyellow", "darkred"))(n_col)
+          ## if you have strings, use as many colors as different values of strings
+          ## if you have binary, use 2 colors
+          ## else, if numeric
+          ## create value-palette mapping
+          points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = palette, pch = 21, cex = 1)
+      }
     },
     print = function() {
       output <- list()
@@ -511,14 +522,25 @@ gf_add_point_layer <- function(geoframe, layer, coords, data) {
     cpp_handler = geoframe$.__enclos_env__$private$geoframe_
     data_ = list()
     data_[["dbl_data"]] = list()
-    if(is.matrix(data)) {
+    if(is.matrix(data) || is.data.frame(data)) {
         n_col = dim(data)[2]
         for(i in seq(from = 1, to = n_col)) {
-            colname = paste("V", i, sep = "")
-            data_[["dbl_data"]][[colname]] = data[, i]
+            colname = if(is.null(colnames(data))) paste("V", i, sep = "") else colnames(data)[i]
+            if(is.character(coords)) {
+                if(!(colname %in% coords)) {
+                    data_[["dbl_data"]][[colname]] = as.matrix(data[, i])
+                }
+            }
         }
     }
-    cpp_handler$insert_scalar_point_layer(layer, coords, data_)
+    coords_ = matrix(0, nrow = 0, ncol = 0)
+    if(is.character(coords)) { ## coords are given as colnames of data
+        coords_ = as.matrix(data[, coords])
+    } else {
+        coords_ = coords
+    }
+    
+    cpp_handler$insert_scalar_point_layer(layer, coords_, data_)
     geoframe$.__enclos_env__$private$layer_map_[[layer]] <- "point"
-    return(geoframe)
+    invisible(geoframe)
 }

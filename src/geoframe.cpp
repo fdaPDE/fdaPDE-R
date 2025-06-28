@@ -60,5 +60,3 @@ RCPP_MODULE(cpp_geoframe_2_2) {
 
 }   // namespace r
 }   // namespace fdapde
-
-
