@@ -23,42 +23,52 @@
     type = character()
   ),
   public = list(
-      initialize = function(domain, type, coeff) {
-          local_dim = domain$local_dim
-          embed_dim = domain$embed_dim
-          if (local_dim == 2 && embed_dim == 2) {
-              private$fe_function_ = new(cpp_fe_function_2_2_p1, get_private(domain)$mesh_)
-          }
-          private$type = type
-          if(!is.null(coeff)) {
-              n_dofs <- private$fe_function_$n_dofs()
-              fdapde_assert(nrow(coeff) == n_dofs, "invalid coefficient vector dimensions.")
-              private$fe_function_$set_coeff(coeff)
-          }
-          else {
-              private$fe_function_$set_coeff(matrix(rep(0, times = private$fe_function_$n_dofs()), ncol = 1))
-          }
-      },
-      integral = function(marker = NULL) {
-          if (is.null(marker)) { marker <- -1 }
-          return(private$fe_function_$cell_integrate_on(marker))
+    initialize = function(domain, type, coeff) {
+      local_dim = domain$local_dim
+      embed_dim = domain$embed_dim
+      if (local_dim == 2 && embed_dim == 2) {
+        private$fe_function_ = new(cpp_fe_function_2_2_p1, get_private(domain)$mesh_)
       }
+      private$type = type
+      if (!is.null(coeff)) {
+        n_dofs <- private$fe_function_$n_dofs()
+        fdapde_assert(nrow(coeff) == n_dofs, "invalid coefficient vector dimensions.")
+        private$fe_function_$set_coeff(coeff)
+      } else {
+        private$fe_function_$set_coeff(matrix(rep(0, times = private$fe_function_$n_dofs()), ncol = 1))
+      }
+    },
+    integral = function(marker = NULL) {
+      if (is.null(marker)) {
+        marker <- -1
+      }
+      return(private$fe_function_$cell_integrate_on(marker))
+    },
+    eval = function(locations) {
+      return(private$fe_function_$grid_eval(as.matrix(locations)))
+    }
   ),
   active = list(
-      n_dofs = function() private$fe_function_$n_dofs(),
-      l2_norm = function() private$fe_function_$l2_norm(),
-      h1_norm = function() private$fe_function_$h1_norm(),
-      l2_squared_norm = function() private$fe_function_$l2_squared_norm(),
-      h1_squared_norm = function() private$fe_function_$h1_squared_norm(),
-      coeff = function() private$fe_function_$coeff()
+    n_dofs = function() private$fe_function_$n_dofs(),
+    l2_norm = function() private$fe_function_$l2_norm(),
+    h1_norm = function() private$fe_function_$h1_norm(),
+    l2_squared_norm = function() private$fe_function_$l2_squared_norm(),
+    h1_squared_norm = function() private$fe_function_$h1_squared_norm(),
+    coeff = function(c) {
+      if (missing(c)) {
+        return(private$fe_function_$coeff())
+      } else {
+        private$fe_function_$set_coeff(as.matrix(c))
+      }
+    }
   )
 )
 
 #' @export
 fe_function <- function(domain, type, coeff = NULL) {
-    ## check domain is of type triangulation
+  ## check domain is of type triangulation
 
-    ## check type is supported
+  ## check type is supported
   return(.fe_function$new(
     domain = domain,
     type = type,

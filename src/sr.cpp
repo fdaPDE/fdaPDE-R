@@ -17,24 +17,41 @@
 #include <RcppEigen.h>
 // [[Rcpp::depends(RcppEigen)]]
 #include "../inst/include/sr.h"
+#include "../inst/include/gsr.h"
 
 namespace fdapde {
 namespace r {
 
-// clang-format off
+// clang-format on
   
-using cpp_sr_2_2 = SRPDE<2, 2>;
+#define fe_ls_elliptic_rcpp_interface(LocalDim, EmbedDim, Model)                                                       \
+     method("fit"    , &fe_ls_elliptic<LocalDim, EmbedDim, Model>::fit    )                                            \
+    .method("fit_gcv", &fe_ls_elliptic<LocalDim, EmbedDim, Model>::fit_gcv)                                            \
+    .method("f"      , &fe_ls_elliptic<LocalDim, EmbedDim, Model>::f      )                                            \
+    .method("beta"   , &fe_ls_elliptic<LocalDim, EmbedDim, Model>::beta   )                                            \
+    .method("fitted" , &fe_ls_elliptic<LocalDim, EmbedDim, Model>::fitted )
+
+// spatial regression
+using cpp_sr_2_2 = sr_elliptic<2, 2>;
 RCPP_MODULE(cpp_sr_2_2) {
-  Rcpp::class_<SRPDE<2, 2>>("cpp_sr_2_2")
-    .constructor<std::string, Rcpp::Environment, Rcpp::Nullable<Rcpp::List>>()
-    .method("fit"   , &SRPDE<2, 2>::fit   )
-    .method("f"     , &SRPDE<2, 2>::f     )
-    .method("beta"  , &SRPDE<2, 2>::beta  )
-    .method("fitted", &SRPDE<2, 2>::fitted);
+    Rcpp::class_<fe_ls_elliptic<2, 2, fdapde::SRPDE<internals::fe_ls_elliptic>>>("cpp_fe_ls_elliptic")
+      .fe_ls_elliptic_rcpp_interface(2, 2, fdapde::SRPDE<internals::fe_ls_elliptic>);
+    Rcpp::class_<sr_elliptic<2, 2>>("cpp_sr_2_2")
+      .derives<fe_ls_elliptic<2, 2, fdapde::SRPDE<internals::fe_ls_elliptic>>>("cpp_fe_ls_elliptic")
+      .constructor<std::string, Rcpp::Environment, Rcpp::Nullable<Rcpp::List>>();
 }
 
-  
-// clang-format on
+// generalized regression
+using cpp_gsr_2_2 = gsr_elliptic<2, 2>;
+RCPP_MODULE(cpp_gsr_2_2) {
+    Rcpp::class_<fe_ls_elliptic<2, 2, fdapde::GSRPDE<internals::fe_ls_elliptic>>>("cpp_fe_ls_elliptic")
+      .fe_ls_elliptic_rcpp_interface(2, 2, fdapde::GSRPDE<internals::fe_ls_elliptic>);
+    Rcpp::class_<gsr_elliptic<2, 2>>("cpp_gsr_2_2")
+      .derives<fe_ls_elliptic<2, 2, fdapde::GSRPDE<internals::fe_ls_elliptic>>>("cpp_fe_ls_elliptic")
+      .constructor<std::string, Rcpp::Environment, std::string, Rcpp::Nullable<Rcpp::List>>();
+}
 
+// clang-format on
+  
 }   // namespace r
 }   // namespace fdapde

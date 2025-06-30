@@ -17,6 +17,7 @@ RcppExport SEXP _rcpp_module_boot_cpp_fe_space_2_2_p1();
 RcppExport SEXP _rcpp_module_boot_cpp_geoframe_2_2();
 RcppExport SEXP _rcpp_module_boot_cpp_triangulation_2_2();
 RcppExport SEXP _rcpp_module_boot_cpp_sr_2_2();
+RcppExport SEXP _rcpp_module_boot_cpp_gsr_2_2();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_cpp_fe_function_2_2_p1", (DL_FUNC) &_rcpp_module_boot_cpp_fe_function_2_2_p1, 0},
@@ -24,6 +25,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_cpp_geoframe_2_2", (DL_FUNC) &_rcpp_module_boot_cpp_geoframe_2_2, 0},
     {"_rcpp_module_boot_cpp_triangulation_2_2", (DL_FUNC) &_rcpp_module_boot_cpp_triangulation_2_2, 0},
     {"_rcpp_module_boot_cpp_sr_2_2", (DL_FUNC) &_rcpp_module_boot_cpp_sr_2_2, 0},
+    {"_rcpp_module_boot_cpp_gsr_2_2", (DL_FUNC) &_rcpp_module_boot_cpp_gsr_2_2, 0},
     {NULL, NULL, 0}
 };
 

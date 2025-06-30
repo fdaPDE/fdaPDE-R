@@ -43,13 +43,18 @@ namespace r {
       .method("rows"            , &GeoFrame<Triangulation>::rows)                                                      \
       .method("cols"            , &GeoFrame<Triangulation>::cols)                                                      \
       .method("colnames"        , &GeoFrame<Triangulation>::colnames)                                                  \
+      .method("colnames_all"    , &GeoFrame<Triangulation>::colnames_all)                                              \
       .method("bbox"            , &GeoFrame<Triangulation>::bbox)                                                      \
       .method("n_nodes"         , &GeoFrame<Triangulation>::n_nodes)                                                   \
       .method("n_cells"         , &GeoFrame<Triangulation>::n_cells)                                                   \
       /* point layer */                                                                                                \
       .method("insert_scalar_point_layer" , &GeoFrame<Triangulation>::insert_scalar_point_layer)                       \
-      .method("point_coordinates"         , &GeoFrame<Triangulation>::point_coordinates)
-     
+      .method("point_coordinates"         , &GeoFrame<Triangulation>::point_coordinates)                               \
+      /* areal layer */                                                                                                \
+      .method("insert_scalar_areal_layer" , &GeoFrame<Triangulation>::insert_scalar_areal_layer)
+
+// colnames_all can be done directly from R
+	      
 using cpp_geoframe_2_2 = GeoFrame<fdapde::Triangulation<2, 2>>;
 RCPP_MODULE(cpp_geoframe_2_2) {
     Rcpp::class_<GeoFrame<fdapde::Triangulation<2, 2>>>("cpp_geoframe_2_2")

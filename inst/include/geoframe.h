@@ -67,6 +67,22 @@ template <typename Triangulation> class GeoFrame {
         copy_.template operator()<double>("dbl_data");
         copy_.template operator()<std::string>("str_data");
     }
+    void
+    insert_scalar_areal_layer(const std::string& layer_name, const std::vector<int>& regions, const Rcpp::List& data) {
+        auto& l = data_.template insert_scalar_layer<POLYGON>(layer_name, regions);
+        // copy data from R list
+        auto copy_ = [&]<typename T>(const std::string& field) {
+            if (data.containsElementNamed(field.data())) {
+                std::vector<std::string> names = Rcpp::as<Rcpp::List>(data[field]).names();
+                for (const std::string& name : names) {
+                    l.load_vec(name, Rcpp::as<std::vector<T>>(Rcpp::as<Rcpp::List>(data[field])[name]));
+                }
+            }
+        };
+        copy_.template operator()<int>("int_data");
+        copy_.template operator()<double>("dbl_data");
+        copy_.template operator()<std::string>("str_data");
+    }
 
     Eigen::Matrix<double, Dynamic, Dynamic> bbox() { return data_.template triangulation<0>().bbox(); }
     int n_nodes() { return data_.template triangulation<0>().n_nodes(); }
@@ -114,6 +130,7 @@ template <typename Triangulation> class GeoFrame {
         }
         return ctype_;
     }
+    std::vector<std::string> colnames_all() const { return data_.colnames(); }
     std::vector<std::string> colnames(const std::string& layer_name) {
         fdapde::ltype ltype = data_[layer_name].category()[0];
         std::vector<std::string> cols_;

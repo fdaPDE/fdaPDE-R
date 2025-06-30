@@ -15,23 +15,23 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 cpp_aligned_index <- function(index) return(index - 1)
-r_aligned_index   <- function(index) return(index + 1)
+r_aligned_index <- function(index) return(index + 1)
 
 get_private <- function(x) {
-    if(!inherits(x, "R6")) stop(deparse(substitute(x)), ": not an R6 class")
-    return(x$.__enclos_env__$private)
+  if (!inherits(x, "R6")) stop(deparse(substitute(x)), ": not an R6 class")
+  return(x$.__enclos_env__$private)
 }
 
 set_private <- function(x, attribute, value) {
-    if(!inherits(x, "R6")) stop(deparse(substitute(x)), ": not an R6 class")
-    invisible(x$.__enclos_env__$private[[attribute]] <- value)
+  if (!inherits(x, "R6")) stop(deparse(substitute(x)), ": not an R6 class")
+  invisible(x$.__enclos_env__$private[[attribute]] <- value)
 }
 
 fdapde_assert <- function(predicate, msg) {
-    if(!predicate) {
-        cat(paste0("Assert '", deparse(substitute(predicate)), "' failed: ", msg, "\n"))
-        opt <- options(show.error.messages = FALSE)
-        on.exit(options(opt))
-        stop()
-    }
+  if (!predicate) {
+    cat(paste0("Assert '", deparse(substitute(predicate)), "' failed: ", msg, "\n"))
+    opt <- options(show.error.messages = FALSE)
+    on.exit(options(opt))
+    stop()
+  }
 }

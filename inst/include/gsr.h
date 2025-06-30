@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef __R_SR_H__
-#define __R_SR_H__
+#ifndef __R_GSR_H__
+#define __R_GSR_H__
 
 #include <RcppEigen.h>
 // [[Rcpp::depends(RcppEigen)]]
@@ -26,13 +26,20 @@ namespace fdapde {
 namespace r {
 
 template <int LocalDim, int EmbedDim>
-class sr_elliptic : public fe_ls_elliptic<LocalDim, EmbedDim, fdapde::SRPDE<internals::fe_ls_elliptic>> {
-    using Base = fe_ls_elliptic<LocalDim, EmbedDim, fdapde::SRPDE<internals::fe_ls_elliptic>>;
+class gsr_elliptic : public fe_ls_elliptic<LocalDim, EmbedDim, fdapde::GSRPDE<internals::fe_ls_elliptic>> {
+    using Base = fe_ls_elliptic<LocalDim, EmbedDim, fdapde::GSRPDE<internals::fe_ls_elliptic>>;
+    using Base::model_;
    public:
-    sr_elliptic() noexcept = default;
-    sr_elliptic(
-      const std::string& formula, const Rcpp::Environment& geoframe, const Rcpp::Nullable<Rcpp::List>& penalty) :
-        Base(formula, geoframe, penalty) { }
+    gsr_elliptic() noexcept = default;
+    gsr_elliptic(
+      const std::string& formula, const Rcpp::Environment& geoframe, const std::string& family,
+      const Rcpp::Nullable<Rcpp::List>& penalty) :
+        Base(formula, geoframe, penalty) {
+        if (family == "bernoulli")   model_.set_family(bernoulli_distribution());
+        if (family == "poisson")     model_.set_family(poisson_distribution());
+        if (family == "exponential") model_.set_family(exponential_distribution());
+        if (family == "gamma")       model_.set_family(gamma_distribution());
+    }
 };
 
 }   // namespace r
