@@ -151,10 +151,8 @@ data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     ## subsetting
     `[[` = function(layer_name) {
       if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
-      if (private$layer_map_[[layer_name]] == "areal") { print("entro qui")
-          invisible(.areal_layer$new(self, layer_name)) }
-      if (private$layer_map_[[layer_name]] == "point") invisible(.point_layer$new(self, layer_name))
-      print("non entro da nessuna parte")
+      if (private$layer_map_[[layer_name]] == "areal") return(invisible(.areal_layer$new(self, layer_name)))
+      if (private$layer_map_[[layer_name]] == "point") return(invisible(.point_layer$new(self, layer_name)))
     },
     ## `[<-` = function(layer_name, rows, cols, val) {
     ##   if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
