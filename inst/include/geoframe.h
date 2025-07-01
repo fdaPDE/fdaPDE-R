@@ -57,9 +57,10 @@ template <typename Triangulation> class GeoFrame {
         // copy data from R list
         auto copy_ = [&]<typename T>(const std::string& field) {
             if (data.containsElementNamed(field.data())) {
-                std::vector<std::string> names = Rcpp::as<Rcpp::List>(data[field]).names();
-                for (const std::string& name : names) {
-                    l.load_vec(name, Rcpp::as<std::vector<T>>(Rcpp::as<Rcpp::List>(data[field])[name]));
+                Rcpp::List lst = Rcpp::as<Rcpp::List>(data[field]);
+                if (lst.size() != 0) {
+                    std::vector<std::string> names = lst.names();
+                    for (const std::string& name : names) { l.load_vec(name, Rcpp::as<std::vector<T>>(lst[name])); }
                 }
             }
         };
@@ -73,9 +74,10 @@ template <typename Triangulation> class GeoFrame {
         // copy data from R list
         auto copy_ = [&]<typename T>(const std::string& field) {
             if (data.containsElementNamed(field.data())) {
-                std::vector<std::string> names = Rcpp::as<Rcpp::List>(data[field]).names();
-                for (const std::string& name : names) {
-                    l.load_vec(name, Rcpp::as<std::vector<T>>(Rcpp::as<Rcpp::List>(data[field])[name]));
+                Rcpp::List lst = Rcpp::as<Rcpp::List>(data[field]);
+                if (lst.size() != 0) {
+                    std::vector<std::string> names = lst.names();
+                    for (const std::string& name : names) { l.load_vec(name, Rcpp::as<std::vector<T>>(lst[name])); }
                 }
             }
         };
@@ -83,7 +85,7 @@ template <typename Triangulation> class GeoFrame {
         copy_.template operator()<double>("dbl_data");
         copy_.template operator()<std::string>("str_data");
     }
-
+    void load_shp(const std::string& layer_name, const std::string& filename) { data_.load_shp(layer_name, filename); }
     Eigen::Matrix<double, Dynamic, Dynamic> bbox() { return data_.template triangulation<0>().bbox(); }
     int n_nodes() { return data_.template triangulation<0>().n_nodes(); }
     int n_cells() { return data_.template triangulation<0>().n_cells(); }

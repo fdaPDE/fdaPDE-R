@@ -51,7 +51,8 @@ namespace r {
       .method("insert_scalar_point_layer" , &GeoFrame<Triangulation>::insert_scalar_point_layer)                       \
       .method("point_coordinates"         , &GeoFrame<Triangulation>::point_coordinates)                               \
       /* areal layer */                                                                                                \
-      .method("insert_scalar_areal_layer" , &GeoFrame<Triangulation>::insert_scalar_areal_layer)
+      .method("insert_scalar_areal_layer" , &GeoFrame<Triangulation>::insert_scalar_areal_layer)                       \
+      .method("load_shp"                  , &GeoFrame<Triangulation>::load_shp)
 
 // colnames_all can be done directly from R
 	      

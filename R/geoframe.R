@@ -101,11 +101,60 @@ data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
       }
       cat("")
     },
+    ## modifiers
+    insert = function(layer, type, geo, data) {
+        ## divide data by types
+        env <- new.env()
+        env$data_ <- list()
+        env$data_[["int_data"]] = list()
+        env$data_[["dbl_data"]] = list()
+        env$data_[["str_data"]] = list()
+
+        load <- function(a, b, colname) { ## copies a inside b, depending on a's class
+            if(is.numeric  (a)) b$data_[["dbl_data"]][[colname]] = as.matrix(a)
+            if(is.integer  (a)) b$data_[["int_data"]][[colname]] = as.matrix(a)
+            if(is.character(a)) b$data_[["str_data"]][[colname]] = as.matrix(a)
+        }
+        
+        if (is.matrix(data) || is.data.frame(data)) {
+            n_col = dim(data)[2]
+            for (i in seq(from = 1, to = n_col)) {
+                colname = if (is.null(colnames(data))) paste("V", i, sep = "") else colnames(data)[i]
+                if (is.character(geo)) {
+                    if (!(colname %in% geo)) load(data[, i], env, colname)
+                } else {
+                    load(data[, i], env, colname)
+                }
+            }
+        }
+        ## load geometrical informations
+        geo_ = matrix(0, nrow = 0, ncol = 0)
+        if (is.character(geo)) {
+            ## geometry is referenced as columns of data
+            geo_ = as.matrix(data[, geo])
+        } else {
+            geo_ = geo
+        }
+        if(type == "point") {
+            private$geoframe_$insert_scalar_point_layer(layer, geo_, env$data_)
+            private$layer_map_[[layer]] <- "point"
+        }
+        if(type == "areal") {
+            private$geoframe_$insert_scalar_areal_layer(layer, geo_, env$data_)
+            private$layer_map_[[layer]] <- "areal"
+        }
+    },
+    load = function(layer, filename) {
+        private$geoframe_$load_shp(layer, filename)
+        private$layer_map_[[layer]] <- "areal"
+    },
     ## subsetting
     `[[` = function(layer_name) {
       if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
-      if (private$layer_map_[[layer_name]] == "areal") invisible(.areal_layer$new(self, layer_name))
+      if (private$layer_map_[[layer_name]] == "areal") { print("entro qui")
+          invisible(.areal_layer$new(self, layer_name)) }
       if (private$layer_map_[[layer_name]] == "point") invisible(.point_layer$new(self, layer_name))
+      print("non entro da nessuna parte")
     },
     ## `[<-` = function(layer_name, rows, cols, val) {
     ##   if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
@@ -562,72 +611,4 @@ gf_load <- function(geoframe, layer, file) {
 #' @export
 gf_sample <- function(geoframe, layer, size) {
   return(.areal_layer$new(geoframe, layer)$sample(size))
-}
-
-#' @export
-gf_add_point_layer <- function(geoframe, layer, coords, data) {
-  cpp_handler = geoframe$.__enclos_env__$private$geoframe_
-  data_ = list()
-  data_[["dbl_data"]] = list()
-  if (is.matrix(data) || is.data.frame(data)) {
-    n_col = dim(data)[2]
-    for (i in seq(from = 1, to = n_col)) {
-      colname = if (is.null(colnames(data))) paste("V", i, sep = "") else colnames(data)[i]
-      if (is.character(coords)) {
-        if (!(colname %in% coords)) {
-          data_[["dbl_data"]][[colname]] = as.matrix(data[, i])
-        }
-      } else {
-        data_[["dbl_data"]][[colname]] = as.matrix(data[, i])
-      }
-    }
-  }
-  coords_ = matrix(0, nrow = 0, ncol = 0)
-  if (is.character(coords)) {
-    ## coords are given as colnames of data
-    coords_ = as.matrix(data[, coords])
-  } else {
-    coords_ = coords
-  }
-
-  cpp_handler$insert_scalar_point_layer(layer, coords_, data_)
-  geoframe$.__enclos_env__$private$layer_map_[[layer]] <- "point"
-  invisible(geoframe)
-}
-
-#' @export
-gf_add_areal_layer <- function(geoframe, layer, regions, data) {
-  ## need to check regions has the same size of n_cells
-  ## if regions is a character, it must be of a single element
-  ## must check that there are as many unique indexes in regions as rows in data
-
-  cpp_handler = geoframe$.__enclos_env__$private$geoframe_
-  data_ = list()
-  data_[["dbl_data"]] = list()
-  if (is.matrix(data) || is.data.frame(data)) {
-    n_col = dim(data)[2]
-    for (i in seq(from = 1, to = n_col)) {
-      colname = if (is.null(colnames(data))) paste("V", i, sep = "") else colnames(data)[i]
-      if (is.character(regions)) {
-        if (!(colname %in% regions)) {
-          data_[["dbl_data"]][[colname]] = as.matrix(data[, i])
-        }
-      } else {
-        data_[["dbl_data"]][[colname]] = as.matrix(data[, i])
-      }
-    }
-  }
-  regions_ = matrix(0, nrow = 0, ncol = 0)
-  if (is.character(regions)) {
-    ## regions is a column of data
-    regions_ = as.matrix(data[, regions])
-  } else {
-    regions_ = regions
-  }
-
-  print(data_)
-
-  cpp_handler$insert_scalar_areal_layer(layer, regions_, data_)
-  geoframe$.__enclos_env__$private$layer_map_[[layer]] <- "areal"
-  invisible(geoframe)
 }

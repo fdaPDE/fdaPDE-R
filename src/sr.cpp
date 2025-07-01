@@ -18,6 +18,7 @@
 // [[Rcpp::depends(RcppEigen)]]
 #include "../inst/include/sr.h"
 #include "../inst/include/gsr.h"
+#include "../inst/include/qsr.h"
 
 namespace fdapde {
 namespace r {
@@ -51,6 +52,16 @@ RCPP_MODULE(cpp_gsr_2_2) {
       .constructor<std::string, Rcpp::Environment, std::string, Rcpp::Nullable<Rcpp::List>>();
 }
 
+// quantile regression
+using cpp_qsr_2_2 = qsr_elliptic<2, 2>;
+RCPP_MODULE(cpp_qsr_2_2) {
+    Rcpp::class_<fe_ls_elliptic<2, 2, fdapde::QSRPDE<internals::fe_ls_elliptic>>>("cpp_fe_ls_elliptic")
+      .fe_ls_elliptic_rcpp_interface(2, 2, fdapde::QSRPDE<internals::fe_ls_elliptic>);
+    Rcpp::class_<qsr_elliptic<2, 2>>("cpp_qsr_2_2")
+      .derives<fe_ls_elliptic<2, 2, fdapde::QSRPDE<internals::fe_ls_elliptic>>>("cpp_fe_ls_elliptic")
+      .constructor<std::string, Rcpp::Environment, double, Rcpp::Nullable<Rcpp::List>>();
+}
+  
 // clang-format on
   
 }   // namespace r
