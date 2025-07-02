@@ -48,7 +48,7 @@ template <typename Triangulation> class GeoFrame {
         };
         fdapde::ltype ltype = gf[layer_name].category()[0];
         if (ltype == ltype::point) { make_(POINT {}); }
-        // if (ltype == ltype::areal) { make_(POLYGON {}); } -------------------------------- TODO, not working
+        if (ltype == ltype::areal) { make_(POLYGON {}); }
     }
     // layer insertion
     void insert_scalar_point_layer(

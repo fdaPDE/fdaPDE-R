@@ -33,9 +33,9 @@
 
       if (is.null(penalty)) {
         ## fallback to laplacian penalty
-        private$model_ = new(cpp_sr_2_2, formula, get_private(data)$geoframe_, penalty)
+        private$model_ = new(cpp_sr_2_2, formula, get_private(data$gf__ptr__)$ptr_, penalty)
       } else {
-        domain <- get_private(get_private(data)$triangulation_)$mesh_
+        domain <- get_private(get_private(data$gf__ptr__)$mesh_)$mesh_
         params <- list()
         quad_nodes <- matrix()
         if (is.function(penalty$K) || is.function(penalty$b) || is.function(penalty$c) || is.function(penalty$u)) {
@@ -101,7 +101,7 @@
             params$c = c(quad_nodes)
           }
         }
-        private$model_ = new(cpp_sr_2_2, formula, get_private(data)$geoframe_, params)
+        private$model_ = new(cpp_sr_2_2, formula, get_private(data$gf__ptr__)$ptr_, params)
       }
     },
     fit = function(lambda = NULL, calibrator = NULL) {
@@ -150,9 +150,9 @@ sr <- function(formula, data, penalty = NULL) {
 
       if (is.null(penalty)) {
         ## fallback to laplacian penalty
-        private$model_ = new(cpp_gsr_2_2, formula, get_private(data)$geoframe_, family, penalty)
+        private$model_ = new(cpp_gsr_2_2, formula, get_private(data$gf__ptr__)$ptr_, family, penalty)
       } else {
-        domain <- get_private(get_private(data)$triangulation_)$mesh_
+        domain <- get_private(get_private(data$gf__ptr__)$mesh_)$mesh_
         params <- list()
         quad_nodes <- matrix()
         if (is.function(penalty$K) || is.function(penalty$b) || is.function(penalty$c) || is.function(penalty$u)) {
@@ -218,7 +218,7 @@ sr <- function(formula, data, penalty = NULL) {
             params$c = c(quad_nodes)
           }
         }
-        private$model_ = new(cpp_gsr_2_2, formula, get_private(data)$geoframe_, family, params)
+        private$model_ = new(cpp_gsr_2_2, formula, get_private(data$gf__ptr__)$ptr_, family, params)
       }
     },
     fit = function(lambda = NULL, calibrator = NULL) {
@@ -267,9 +267,9 @@ gsr <- function(formula, data, family, penalty = NULL) {
 
       if (is.null(penalty)) {
         ## fallback to laplacian penalty
-        private$model_ = new(cpp_qsr_2_2, formula, get_private(data)$geoframe_, level, penalty)
+        private$model_ = new(cpp_qsr_2_2, formula, get_private(data$gf__ptr__)$ptr_, level, penalty)
       } else {
-        domain <- get_private(get_private(data)$triangulation_)$mesh_
+        domain <- get_private(get_private(data$gf__ptr__)$mesh_)$mesh_
         params <- list()
         quad_nodes <- matrix()
         if (is.function(penalty$K) || is.function(penalty$b) || is.function(penalty$c) || is.function(penalty$u)) {
@@ -335,7 +335,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
             params$c = c(quad_nodes)
           }
         }
-        private$model_ = new(cpp_qsr_2_2, formula, get_private(data)$geoframe_, level, params)
+        private$model_ = new(cpp_qsr_2_2, formula, get_private(data$gf__ptr__)$ptr_, level, params)
       }
     },
     fit = function(lambda = NULL, calibrator = NULL) {
@@ -360,12 +360,12 @@ gsr <- function(formula, data, family, penalty = NULL) {
 
 #' @export
 qsr <- function(formula, data, level, penalty = NULL) {
-    return(.qsr$new(
-                    formula = deparse(formula),
-                    data = data,
-                    level = level,
-                    penalty = penalty
-                ))
+  return(.qsr$new(
+    formula = deparse(formula),
+    data = data,
+    level = level,
+    penalty = penalty
+  ))
 }
 
 #' @export
