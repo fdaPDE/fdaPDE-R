@@ -35,8 +35,8 @@ template <int LocalDim, int EmbedDim> class fpca_laplace {
     using GeoFrame = fdapde::GeoFrame<Triangulation>;
     using Model = fdapde::fPCA<internals::fe_ls_elliptic>;
    public:
-    fpca() noexcept = default;
-    fpca(const std::string& colname, const Rcpp::Environment& geoframe) {
+    fpca_laplace() noexcept = default;
+    fpca_laplace(const std::string& colname, const Rcpp::Environment& geoframe) {
         const GeoFrame& gf = get_env_as<GeoFrame>(geoframe);
         const Triangulation& D = get_env_as<GeoFrame>(geoframe).template triangulation<0>();
         FeSpace Vh(D, P1<1>);
@@ -49,10 +49,11 @@ template <int LocalDim, int EmbedDim> class fpca_laplace {
         auto F = integral(D)(u * v);
 
         model_.discretize(std::pair {a, F});
-	model_.analyze_data(colname, geoframe);
+	model_.analyze_data(colname, gf);
     }
-    void fit(int rank, const std::vector<double>& lambda_grid, int flag = ComputeRandSVD) {
-        model_.fit(rank, lambda_grid, flag);
+    void fit(int rank, const Rcpp::List& params) {
+        std::vector<double> lambda_grid = params["grid"];
+        model_.fit(rank, lambda_grid, ComputeRandSVD);
     }
     // observers
     const matrix_t& S() const { return model_.S(); }   // scoring matrix

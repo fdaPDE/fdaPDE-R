@@ -54,8 +54,8 @@ template <typename Triangulation> class GeoFrame {
         if (ltype == ltype::areal) { make_(POLYGON {}); }
     }
     // layer insertion
-    void insert_scalar_point_layer(
-      const std::string& layer_name, const Eigen::Matrix<double, Dynamic, Dynamic>& locs, const Rcpp::List& data) {
+    template <typename GeoDescriptor>
+    void insert_scalar_point_layer(const std::string& layer_name, const GeoDescriptor& locs, const Rcpp::List& data) {
         auto& l = data_.template insert_scalar_layer<POINT>(layer_name, locs);
         // copy data from R list
         auto copy_ = [&]<typename T>(const std::string& field) {
@@ -92,6 +92,11 @@ template <typename Triangulation> class GeoFrame {
     template <typename T>
     void insert(const std::string& layer_name, const std::string& colname, const std::vector<T>& data) {
         data_[layer_name].add_column(colname, data);
+    }
+    template <typename T>
+    void blk_insert(
+      const std::string& layer_name, const std::string& colname, const Eigen::Matrix<T, Dynamic, Dynamic>& data) {
+        data_[layer_name].add_block(colname, data);
     }
     // observers
     Eigen::Matrix<double, Dynamic, Dynamic> bbox() { return data_.template triangulation<0>().bbox(); }

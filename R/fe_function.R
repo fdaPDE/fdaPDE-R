@@ -32,7 +32,7 @@
       private$type = type
       if (!is.null(coeff)) {
         n_dofs <- private$fe_function_$n_dofs()
-        fdapde_assert(nrow(coeff) == n_dofs, "invalid coefficient vector dimensions.")
+        fdapde_assert(length(coeff) == n_dofs, "invalid coefficient vector dimensions.")
         private$fe_function_$set_coeff(coeff)
       } else {
         private$fe_function_$set_coeff(matrix(rep(0, times = private$fe_function_$n_dofs()), ncol = 1))

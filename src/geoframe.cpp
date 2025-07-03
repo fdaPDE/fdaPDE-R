@@ -22,6 +22,8 @@ namespace fdapde {
 namespace r {
 
 // clang-format off
+
+using matrix_t = Eigen::Matrix<double, Dynamic, Dynamic>;
   
 #define geoframe_rcpp_interface(Triangulation)                                                                         \
      constructor<Rcpp::Environment>()                                                                                  \
@@ -42,6 +44,8 @@ namespace r {
       .method("int32_insert"    , &GeoFrame<Triangulation>::insert<std::int32_t>)                                      \
       .method("str_insert"      , &GeoFrame<Triangulation>::insert<std::string>)                                       \
       .method("ltype"           , &GeoFrame<Triangulation>::ltype)                                                     \
+      .method("flt64_blk_insert", &GeoFrame<Triangulation>::blk_insert<double>)                                        \
+      .method("int64_blk_insert", &GeoFrame<Triangulation>::blk_insert<std::int64_t>)                                  \
       .method("ltype"           , &GeoFrame<Triangulation>::ltype)                                                     \
       .method("ctype"           , &GeoFrame<Triangulation>::ctype)                                                     \
       .method("rows"            , &GeoFrame<Triangulation>::rows)                                                      \
@@ -52,7 +56,8 @@ namespace r {
       .method("n_nodes"         , &GeoFrame<Triangulation>::n_nodes)                                                   \
       .method("n_cells"         , &GeoFrame<Triangulation>::n_cells)                                                   \
       /* point layer */                                                                                                \
-      .method("insert_scalar_point_layer" , &GeoFrame<Triangulation>::insert_scalar_point_layer)                       \
+      .method("insert_scalar_point_layer" , &GeoFrame<Triangulation>::insert_scalar_point_layer<matrix_t>)             \
+      .method("insert_scalar_point_layer_mesh_nodes" , &GeoFrame<Triangulation>::insert_scalar_point_layer<int>)       \
       .method("point_coordinates"         , &GeoFrame<Triangulation>::point_coordinates)                               \
       /* areal layer */                                                                                                \
       .method("insert_scalar_areal_layer" , &GeoFrame<Triangulation>::insert_scalar_areal_layer)                       \

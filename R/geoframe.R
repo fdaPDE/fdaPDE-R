@@ -38,8 +38,7 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
       }
     },
     ## modifiers
-    insert__ = function(layer, type, geo, data) {
-      ## divide data by types
+    insert = function(layer, type, geo = NULL, data = NULL) {
       env <- new.env()
       env$data_ <- list()
       env$data_[["int_data"]] = list()
@@ -53,32 +52,40 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
         if (is.character(a)) b$data_[["str_data"]][[colname]] = as.matrix(a)
       }
 
-      if (is.matrix(data) || is.data.frame(data)) {
-        n_col = dim(data)[2]
-        for (i in seq(from = 1, to = n_col)) {
-          colname = if (is.null(colnames(data))) paste("V", i, sep = "") else colnames(data)[i]
-          if (is.character(geo)) {
-            if (!(colname %in% geo)) load(data[, i], env, colname)
-          } else {
-            load(data[, i], env, colname)
+      if(!is.null(data)) {
+        if (is.matrix(data) || is.data.frame(data)) {
+          n_col = dim(data)[2]
+          for (i in seq(from = 1, to = n_col)) {
+            colname = if (is.null(colnames(data))) paste("V", i, sep = "") else colnames(data)[i]
+            if (is.character(geo)) {
+              if (!(colname %in% geo)) load(data[, i], env, colname)
+            } else {
+              load(data[, i], env, colname)
+            }
           }
         }
       }
       ## load geometrical informations
-      geo_ = matrix(0, nrow = 0, ncol = 0)
-      if (is.character(geo)) {
-        ## geometry is referenced as columns of data
-        geo_ = as.matrix(data[, geo])
-      } else {
-        geo_ = geo
-      }
-      if (type == "point") {
-        private$ptr_$insert_scalar_point_layer(layer, geo_, env$data_)
+      if (is.null(geo)) {
+        fdapde_assert(!is.null(geo) || type == "point", "Missing geometry.")
+        private$ptr_$insert_scalar_point_layer_mesh_nodes(layer, 0, env$data_)
         private$layer_map_[[layer]] <- "point"
-      }
-      if (type == "areal") {
-        private$ptr_$insert_scalar_areal_layer(layer, geo_, env$data_)
-        private$layer_map_[[layer]] <- "areal"
+      } else {
+        geo_ = matrix(0, nrow = 0, ncol = 0)
+        if (is.character(geo)) {
+          ## geometry is referenced as columns of data
+          geo_ = as.matrix(data[, geo])
+        } else {
+          geo_ = as.matrix(geo)
+        }
+        if (type == "point") {
+          private$ptr_$insert_scalar_point_layer(layer, geo_, env$data_)
+          private$layer_map_[[layer]] <- "point"
+        }
+        if (type == "areal") {
+          private$ptr_$insert_scalar_areal_layer(layer, geo_, env$data_)
+          private$layer_map_[[layer]] <- "areal"
+        }
       }
     },
     load_shp = function(layer, filename) {
@@ -577,26 +584,30 @@ print.gf_point <- function(x) {
       layer_name  <- x$gf__ptr__$name
       nrows       <- x$gf__ptr__$rows
       if(name %in% x$gf__ptr__$colnames) { ## modify in place
-      
-      rows  <- as.vector(seq(from = 0, to = (nrows - 1)))
-      dtype <- cpp_backend$ctype(layer_name, name)
+        rows  <- as.vector(seq(from = 0, to = (nrows - 1)))
+        dtype <- cpp_backend$ctype(layer_name, name)
 
-      if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-      ## dispatch to typed assignment logic
-      if (dtype == data_t$flt64) cpp_backend$flt64_assign(layer_name, rows, name, as.numeric(value))
-      if (dtype == data_t$flt32) cpp_backend$flt32_assign(layer_name, rows, name, as.numeric(value))
-      if (dtype == data_t$int64) cpp_backend$int64_assign(layer_name, rows, name, as.integer(value))
-      if (dtype == data_t$int32) cpp_backend$int32_assign(layer_name, rows, name, as.integer(value))
-      if (dtype == data_t$bin)   cpp_backend$bin_assign  (layer_name, rows, name, as.logical(value))
-      if (dtype == data_t$str)   cpp_backend$str_assign  (layer_name, rows, name, as.character(value))
+        if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
+        ## dispatch to typed assignment logic
+        if (dtype == data_t$flt64) cpp_backend$flt64_assign(layer_name, rows, name, as.numeric(value))
+        if (dtype == data_t$flt32) cpp_backend$flt32_assign(layer_name, rows, name, as.numeric(value))
+        if (dtype == data_t$int64) cpp_backend$int64_assign(layer_name, rows, name, as.integer(value))
+        if (dtype == data_t$int32) cpp_backend$int32_assign(layer_name, rows, name, as.integer(value))
+        if (dtype == data_t$bin)   cpp_backend$bin_assign  (layer_name, rows, name, as.logical(value))
+        if (dtype == data_t$str)   cpp_backend$str_assign  (layer_name, rows, name, as.character(value))
       } else { ## column insertion
-          fdapde_assert(length(value) == 1 || length(value) == nrows, "Invalid assignment.")
-
-          if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-          ## dispatch to typed insertion logic
-          if (is.numeric(value))   cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
-          if (is.integer(value))   cpp_backend$int64_insert(layer_name, name, as.integer(value))
-          if (is.character(value)) cpp_backend$str_insert  (layer_name, name, as.character(value))
+          if(is.matrix(value)) {
+            fdapde_assert(nrow(value) == nrows, "Invalid assignment.")
+            cpp_backend$flt64_blk_insert(layer_name, name, as.matrix(value))
+          } else {
+            fdapde_assert(length(value) == 1 || length(value) == nrows, "Invalid assignment.")
+              
+            if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
+            ## dispatch to typed insertion logic
+            if (is.numeric(value))   cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
+            if (is.integer(value))   cpp_backend$int64_insert(layer_name, name, as.integer(value))
+            if (is.character(value)) cpp_backend$str_insert  (layer_name, name, as.character(value))
+          }
       }
   }
 }
