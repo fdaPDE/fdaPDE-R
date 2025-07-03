@@ -28,6 +28,9 @@ namespace fdapde {
 namespace r {
 
 template <typename Triangulation> class GeoFrame {
+    using int_t = int;
+    using str_t = std::string;
+    using dbl_t = double;
    public:
     static constexpr int local_dim = Triangulation::local_dim;
     static constexpr int embed_dim = Triangulation::embed_dim;
@@ -64,9 +67,9 @@ template <typename Triangulation> class GeoFrame {
                 }
             }
         };
-        copy_.template operator()<int>("int_data");
-        copy_.template operator()<double>("dbl_data");
-        copy_.template operator()<std::string>("str_data");
+        copy_.template operator()<int_t>("int_data");
+        copy_.template operator()<dbl_t>("dbl_data");
+        copy_.template operator()<str_t>("str_data");
     }
     void
     insert_scalar_areal_layer(const std::string& layer_name, const std::vector<int>& regions, const Rcpp::List& data) {
@@ -81,11 +84,16 @@ template <typename Triangulation> class GeoFrame {
                 }
             }
         };
-        copy_.template operator()<int>("int_data");
-        copy_.template operator()<double>("dbl_data");
-        copy_.template operator()<std::string>("str_data");
+        copy_.template operator()<int_t>("int_data");
+        copy_.template operator()<dbl_t>("dbl_data");
+        copy_.template operator()<str_t>("str_data");
     }
     void load_shp(const std::string& layer_name, const std::string& filename) { data_.load_shp(layer_name, filename); }
+    template <typename T>
+    void insert(const std::string& layer_name, const std::string& colname, const std::vector<T>& data) {
+        data_[layer_name].add_column(colname, data);
+    }
+    // observers
     Eigen::Matrix<double, Dynamic, Dynamic> bbox() { return data_.template triangulation<0>().bbox(); }
     int n_nodes() { return data_.template triangulation<0>().n_nodes(); }
     int n_cells() { return data_.template triangulation<0>().n_cells(); }
@@ -128,7 +136,7 @@ template <typename Triangulation> class GeoFrame {
             ctype_ = int(geo_cast<POLYGON>(data_[layer_name]).data().field_descriptor(col_name).type_id());
         }
         if (ltype == ltype::point) {
-            ctype_ = int(geo_cast<POINT>(data_[layer_name]).data().field_descriptor(col_name).type_id());
+            ctype_ = int(geo_cast<POINT  >(data_[layer_name]).data().field_descriptor(col_name).type_id());
         }
         return ctype_;
     }

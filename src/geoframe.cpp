@@ -30,14 +30,18 @@ namespace r {
       .method("flt32_assign"    , &GeoFrame<Triangulation>::assign<float>)                                             \
       .method("int64_assign"    , &GeoFrame<Triangulation>::assign<std::int64_t>)                                      \
       .method("int32_assign"    , &GeoFrame<Triangulation>::assign<std::int32_t>)                                      \
-      .method("bin_assign"      , &GeoFrame<Triangulation>::assign<bool>)                                              \
       .method("str_assign"      , &GeoFrame<Triangulation>::assign<std::string>)                                       \
       .method("flt64_access"    , &GeoFrame<Triangulation>::access<double>)                                            \
       .method("flt32_access"    , &GeoFrame<Triangulation>::access<float>)                                             \
       .method("int64_access"    , &GeoFrame<Triangulation>::access<std::int64_t>)                                      \
       .method("int32_access"    , &GeoFrame<Triangulation>::access<std::int32_t>)                                      \
-      .method("bin_access"      , &GeoFrame<Triangulation>::access<bool>)                                              \
       .method("str_access"      , &GeoFrame<Triangulation>::access<std::string>)                                       \
+      .method("flt64_insert"    , &GeoFrame<Triangulation>::insert<double>)                                            \
+      .method("flt32_insert"    , &GeoFrame<Triangulation>::insert<float>)                                             \
+      .method("int64_insert"    , &GeoFrame<Triangulation>::insert<std::int64_t>)                                      \
+      .method("int32_insert"    , &GeoFrame<Triangulation>::insert<std::int32_t>)                                      \
+      .method("str_insert"      , &GeoFrame<Triangulation>::insert<std::string>)                                       \
+      .method("ltype"           , &GeoFrame<Triangulation>::ltype)                                                     \
       .method("ltype"           , &GeoFrame<Triangulation>::ltype)                                                     \
       .method("ctype"           , &GeoFrame<Triangulation>::ctype)                                                     \
       .method("rows"            , &GeoFrame<Triangulation>::rows)                                                      \
