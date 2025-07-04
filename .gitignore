@@ -42,3 +42,4 @@
 !DESCRIPTION
 !NAMESPACE
 inst/doc
+!.Rbuildignore

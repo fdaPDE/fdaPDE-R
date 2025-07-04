@@ -1,11 +1,24 @@
 Package: fdaPDE2
-Type: Package
 Version: 2.0-0
-Date: 2023-09-09
-Title: Physics-Informed Spatial and Functional Data Analysis
+Date: 2025-07-01
+Title: Physics-Informed Statistical Learning
 Description: An implementation of regression models with partial differential regularizations, making use of the Finite Element Method. The models efficiently handle data distributed over irregularly shaped domains and can comply with various conditions at the boundaries of the domain. A priori information about the spatial structure of the phenomenon under study can be incorporated in the model via the differential regularization. See Sangalli, L. M. (2021). Spatial Regression With Partial Differential Equation Regularisation. International Statistical Review, 89(3), 505-531. for an overview.
-Maintainer: Eleonora Arnone <eleonora.arnone@polimi.it>
-Depends: R (>= 4.2.0)
+Authors@R: 
+      c(person("Alessandro", "Palummo", role = c("aut", "cre"), email = "alessandro.palummo@polimi.it"),
+		person("Aldo", "Clemente", role = "aut", email = " aldo.clemente@polimi.it"),
+		person("Eleonora", "Arnone", role = "aut", email = "eleonora.arnone@unito.it"),
+		person("Luca", "Formaggia", role = "aut", email = " luca.formaggia@polimi.it"),
+		person("Laura", "Sangalli", role = "aut", email = "laura.sangalli@polimi.it"),
+		person("Blerta", "Begu", role = "ctb"),
+		person("Michele", "Cavazzutti", role = "ctb"),
+		person("Marco", "De Sanctis", role = "ctb"),
+		person("Ilenia", "Di Battista", role = "ctb"),
+		person("Pietro", "Donelli", role = "ctb"),
+		person("Marco", "Galliani", role = "ctb"),
+		person("Simone","Panzeri", role = "ctb"))
+Maintainer: Alessandro Palummo <alessandro.palummo@polimi.it>
+Depends: R (>= 4.2.0),
+         R6
 Imports: Rcpp (>= 1.0.7), RcppEigen (>= 0.3.4)
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.3.2

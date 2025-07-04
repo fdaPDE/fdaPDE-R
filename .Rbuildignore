@@ -1,0 +1,7 @@
+^.Rhistory
+^.gitignore
+^.gitmodules
+^\.git$ 
+^\.github$
+^inst/include/.*/test$
+
