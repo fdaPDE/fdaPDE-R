@@ -24,9 +24,8 @@
       private$model_ = new(cpp_fpca_laplace_2_2, column, get_private(data$gf__ptr__)$ptr_)
     },
     fit = function(npc = NULL, calibrator = NULL) {
-      #fdapde_assert(!is.null(calibrator) || !is.null(lambda), "Unable to select smoothing level.")
-      #if (is.null(calibrator)) {
-        private$model_$fit(npc, calibrator)
+      fdapde_assert(!is.null(calibrator), "Unable to select smoothing level.")
+      private$model_$fit(npc, calibrator)
     }
   ),
   active = list(

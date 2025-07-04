@@ -189,7 +189,7 @@ print.gf <- function(x) {
 
 #' @export
 `[[.gf` <- function(x, ...) {
-    x$gf__ptr__$gf__layer__(...)
+  x$gf__ptr__$gf__layer__(...)
 }
 
 ## areal layer
@@ -524,12 +524,14 @@ print.gf_areal <- function(x) {
   active = list(
       name = function() { return(private$name_) },
       rows = function() { return(private$ptr_$rows(private$name_)) },
-      colnames = function() { return(private$ptr_$colnames(private$name_)) }
+      cols = function() { return(length(private$ptr_$colnames(private$name_))) },
+      colnames = function() { return(private$ptr_$colnames(private$name_)) },
+      coordinates = function() { return(private$ptr_$point_coordinates(private$name_)) }
   )
 )
 
 gf_point <- function(geoframe, name) {
-  ptr <- .areal_layer$new(geoframe, name)
+  ptr <- .point_layer$new(geoframe, name)
   obj <- list(gf__ptr__ = ptr)
   obj <- inject_r6_to_s3(obj, ptr)
   class(obj) <- "gf_point"
@@ -539,18 +541,18 @@ gf_point <- function(geoframe, name) {
 ## S3 subsetting getter
 #' @export
 `[.gf_point` <- function(x, rows, cols) {
-  x$gf__ptr__$gf__get__(rows, cols)
+  x[["gf__ptr__"]]$gf__get__(rows, cols)
 }
 
 ## S3 subsetting setter
 #' @export
 `[<-.gf_point` <- function(x, rows, cols, value) {
-  x$gf__ptr__$gf__set__(rows, cols, value)
+  x[["gf__ptr__"]]$gf__set__(rows, cols, value)
 }
 
 #' @export
 print.gf_point <- function(x) {
-  x$gf__ptr__$gf__print__()
+  x[["gf__ptr__"]]$gf__print__()
 }
 
 #' @export
@@ -559,9 +561,9 @@ print.gf_point <- function(x) {
     return(x[[name]])
   } else {
       ## access column data from the backend
-      cpp_backend <- get_private(x$gf__ptr__)$ptr_
-      layer_name  <- x$gf__ptr__$name
-      nrows       <- x$gf__ptr__$rows
+      cpp_backend <- get_private(x[["gf__ptr__"]])$ptr_
+      layer_name  <- x[["gf__ptr__"]]$name
+      nrows       <- x[["gf__ptr__"]]$rows
       
       rows  <- as.vector(seq(from = 0, to = (nrows - 1)))
       dtype <- cpp_backend$ctype(layer_name, name)
@@ -580,10 +582,10 @@ print.gf_point <- function(x) {
   if (name %in% names(x)) {
     x[[name]] <- value
   } else {
-      cpp_backend <- get_private(x$gf__ptr__)$ptr_
-      layer_name  <- x$gf__ptr__$name
-      nrows       <- x$gf__ptr__$rows
-      if(name %in% x$gf__ptr__$colnames) { ## modify in place
+      cpp_backend <- get_private(x[["gf__ptr__"]])$ptr_
+      layer_name  <- x[["gf__ptr__"]]$name
+      nrows       <- x[["gf__ptr__"]]$rows
+      if(name %in% x[["gf__ptr__"]]$colnames) { ## modify in place
         rows  <- as.vector(seq(from = 0, to = (nrows - 1)))
         dtype <- cpp_backend$ctype(layer_name, name)
 
@@ -613,6 +615,36 @@ print.gf_point <- function(x) {
 }
 
 #' @export
+dim.gf_point <- function(x, ...) {
+  return(c(x[["gf__ptr__"]]$rows, x[["gf__ptr__"]]$cols))
+}
+
+#' @export
+names.gf_point <- function(x, ...) {
+  return(x[["gf__ptr__"]]$colnames)
+}
+
+#' @export
 gf_colnames <- function(x, ...) {
-  return(x$gf__ptr__$colnames)
+  return(x[["gf__ptr__"]]$colnames)
+}
+
+#' @export
+dim.gf_point <- function(x, ...) {
+  return(c(x[["gf__ptr__"]]$rows, x[["gf__ptr__"]]$cols))
+}
+
+#' @export
+names.gf_areal <- function(x, ...) {
+  return(x[["gf__ptr__"]]$colnames)
+}
+
+#' @export
+gf_geometry <- function(x, ...) {
+  UseMethod("gf_geometry")
+}
+
+#' @export
+gf_geometry.gf_point <- function(x, ...) {
+  return(x[["gf__ptr__"]]$coordinates)
 }
