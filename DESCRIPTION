@@ -18,8 +18,7 @@ Authors@R:
 		person("Simone","Panzeri", role = "ctb"))
 Maintainer: Alessandro Palummo <alessandro.palummo@polimi.it>
 Depends: R (>= 4.2.0),
-         R6
-Imports: Rcpp (>= 1.0.7), RcppEigen (>= 0.3.4)
+Imports: Rcpp (>= 1.0.7), RcppEigen (>= 0.3.4), methods, R6
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.3.2
 Encoding: UTF-8

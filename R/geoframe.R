@@ -18,6 +18,9 @@
 layer_t <- list(point = 0, areal = 1)
 data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
 
+#' An R6 class representing a geo referenced dataframe
+#'
+#'@rdname geoframe
 .geoframe <- R6::R6Class(
   "cpp_gf",
   private = list(
@@ -26,6 +29,10 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     layer_map_ = list() ## maps layer names to layer types
   ),
   public = list(
+    #' @description
+    #' Creates a new geoframe object.
+    #'
+    #' @param ... Arguments created internally.
     initialize = function(...) {
       args <- list(...)
       if (length(args) == 1) {
@@ -38,6 +45,13 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
       }
     },
     ## modifiers
+    #' @description
+    #' Adds a new data layer.
+    #'
+    #' @param layer A string indicating the name of the data layer.
+    #' @param type A string indicating the type of the layer. It can be either \code{"point"} or \code{"areal"}.
+    #' @param geo A character vector indicating the names of the columns in \code{data} to be used as coordinates. Default is \code{NULL}.
+    #' @param data A data frame containing the data. Default is \code{NULL}.
     insert = function(layer, type, geo = NULL, data = NULL) {
       env <- new.env()
       env$data_ <- list()
@@ -88,11 +102,20 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
         }
       }
     },
+    #' @description
+    #' Adds a new data layer from a shapefile.
+    #'
+    #' @param layer A string indicating the name of the data layer.
+    #' @param filename A string containing the path to the shapefile to be loaded.
     load_shp = function(layer, filename) {
       if(!file.exists(filename)) stop(paste("File", filename, "not found", sep = " "))
       private$ptr_$load_shp(layer, filename)
       private$layer_map_[[layer]] <- "areal"
     },
+    #' @description
+    #' Print method for the \code{geoframe} class.
+    #'
+    #' @param ... Ellipsis for compatibility with \code{plot.base}.
     gf__print__ = function(...) {
       n_layers <- length(private$layer_map_)
       layer_names <- names(private$layer_map_)
@@ -142,6 +165,11 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
       cat("")
     },
     ## subsetting
+    #' @description
+    #' Access method for the \code{geoframe} class.
+    #'
+    #' @param layer_name A string specifying the name of the data layer to be returned.
+    #' @return The requested data layer.
     gf__layer__ = function(layer_name) {
       if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
       if (private$layer_map_[[layer_name]] == "areal") return(gf_areal(private$ptr_, layer_name))
@@ -149,6 +177,8 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     }
   ),
   active = list(
+      #' @field colnames
+      #' Returns the column names
       colnames = function() { return(private$ptr_$colnames_all()) }
   )
 )
@@ -173,7 +203,28 @@ inject_r6_to_s3 <- function(s3obj, r6obj, blacklist = c("initialize", "clone")) 
 }
 
 # S3 constructor
+
+#' Create a Geoframe
+#' 
+#' @param domain An object of the triangulation class created by [triangulation()].
+#' @return An R6 object representing a geo-referenced data frame.
+#' @rdname geoframe
 #' @export
+#' @examples
+#' \dontrun{
+#' library(RTriangle)
+#' library(fdaPDE2)
+#' p <- pslg(P=rbind(c(0, 0), c(1, 0), c(1, 1), c(0, 1)),
+#' S=rbind(c(1, 2), c(2, 3), c(3, 4), c(4,1)))
+#' mesh_data <- triangulate(p, a = 0.00125, q=30)
+#' mesh <- triangulation(nodes = mesh_data$P, cells = mesh_data$T, boundary = mesh_data$PB)
+#' points <- mesh.sample(100)
+#' response <- rnorm(100)
+#' data <- data.frame(p1=points[,1], p2=points[,2], y=response) 
+#' gf <- geoframe(domain = florida)
+#' gf$insert(layer = "temp", type = "point", geo = c("p1", "p2"), data = data)
+#' gf
+#' }
 geoframe <- function(domain) {
   ptr <- .geoframe$new(domain)
   obj <- list(gf__ptr__ = ptr)

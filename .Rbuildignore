@@ -1,7 +1,11 @@
 ^.Rhistory
 ^.gitignore
 ^.gitmodules
-^\.git$ 
-^\.github$
+^git$ 
+^github$
 ^inst/include/.*/test$
-
+^inst/include/.*/.git$
+^inst/include/.*/.github$
+^tests$
+[.]so$
+[.]o$

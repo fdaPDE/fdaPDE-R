@@ -14,7 +14,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#' A triangulated spatial domain
+#' R6 Class representing a function
 #'
 .fe_function <- R6::R6Class(
   "fe_function",
@@ -23,6 +23,14 @@
     type = character()
   ),
   public = list(
+    #' @description
+    #' Creates a new function object defined over a spatial domain.
+    #'
+    #' @param domain A tessellation of the spatial domain, created by [triangulation()].
+    #' @param type A character string indicating the order of the finite element space.
+    #' @param coeff A numeric vector of basis expansion coefficients.
+    #'
+    #' @return A function object defined over the given domain.
     initialize = function(domain, type, coeff) {
       local_dim = domain$local_dim
       embed_dim = domain$embed_dim
@@ -38,22 +46,43 @@
         private$fe_function_$set_coeff(matrix(rep(0, times = private$fe_function_$n_dofs()), ncol = 1))
       }
     },
+    #' @description
+    #' Computes the integral of the function.
+    #'
+    #' @param marker An integer denoting the subdomain over which to compute the integral.
     integral = function(marker = NULL) {
       if (is.null(marker)) {
         marker <- -1
       }
       return(private$fe_function_$cell_integrate_on(marker))
     },
+    #' @description
+    #' Evaluates the function over a set of points.
+    #'
+    #' @param locations A matrix containing the evaluatio points.
     eval = function(locations) {
       return(private$fe_function_$grid_eval(as.matrix(locations)))
     }
   ),
   active = list(
+    #' @field n_dofs (`integer(1)`)\cr
+    #' The number of degrees of freedom of the function.
     n_dofs = function() private$fe_function_$n_dofs(),
+    #' @field l2_norm (`numeric(1)`)\cr
+    #' The L2 norm of the function
     l2_norm = function() private$fe_function_$l2_norm(),
+    #' @field h1_norm (`numeric(1)`)\cr
+    #' The H1 norm of the function
     h1_norm = function() private$fe_function_$h1_norm(),
+    #' @field l2_squared_norm (`numeric(1)`)\cr
+    #' The L2 squared norm of the function
     l2_squared_norm = function() private$fe_function_$l2_squared_norm(),
+    #' @field h1_squared_norm (`numeric(1)`)\cr
+    #' The H1 squared norm of the function
     h1_squared_norm = function() private$fe_function_$h1_squared_norm(),
+    #' @field coeff (`numeric(n_dofs)`)\cr
+    #' Gets or sets the vector of basis expansion coefficients.  
+    #' If a value is provided, it assigns the given vector; otherwise, it returns the current coefficients.
     coeff = function(c) {
       if (missing(c)) {
         return(private$fe_function_$coeff())
@@ -64,7 +93,21 @@
   )
 )
 
+#' Create a function object
+#'
+#' @param domain A \code{triangulation_2_2} R6 class object created by [triangulation()].
+#' @param type A character string indicating the type of basis functions. Use "P1" or "P2" to select finite elements of order 1 or 2, respectively.
+#' @param coeff A numeric vector of basis expansion coefficients. Defaults to \code{NULL}.
+#'
+#' @return An R6 object representing a function belonging to the specified function space.
+#'
 #' @export
+#' @examples
+#' \dontrun{
+#' library(fdaPDE2)
+#' unit_square <- MeshUnitSquare(n = 20)
+#' f <- Function(unit_square, type="fe")
+#' }
 fe_function <- function(domain, type, coeff = NULL) {
   ## check domain is of type triangulation
 
