@@ -30,7 +30,7 @@ mesh_data <- triangulate(p, a = 0.00125, q=30)
 mesh <- triangulation(nodes = mesh_data$P, cells = mesh_data$T, boundary = mesh_data$PB)
 points <- mesh.sample(100)
 response <- rnorm(100)
-data <- data.frame(p1=points[,1], p2=points[,2], y=response) 
+data <- data.frame(p1=points[,1], p2=points[,2], y=response)
 gf <- geoframe(domain = florida)
 gf$insert(layer = "temp", type = "point", geo = c("p1", "p2"), data = data)
 gf
@@ -87,7 +87,8 @@ Adds a new data layer.
 
 \item{\code{type}}{A string indicating the type of the layer. It can be either \code{"point"} or \code{"areal"}.}
 
-\item{\code{geo}}{A character vector indicating the names of the columns in \code{data} to be used as coordinates. Default is \code{NULL}.}
+\item{\code{geo}}{A character vector indicating the names of the columns in \code{data} to be used as coordinates.
+Default is \code{NULL}.}
 
 \item{\code{data}}{A data frame containing the data. Default is \code{NULL}.}
 }

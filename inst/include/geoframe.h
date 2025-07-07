@@ -134,16 +134,16 @@ template <typename Triangulation> class GeoFrame {
     }
 
     int ltype(const std::string& layer_name) const { return static_cast<int>(data_[layer_name].category()[0]); }
-    int ctype(const std::string& layer_name, const std::string& col_name) {
+    int dtype(const std::string& layer_name, const std::string& col_name) {
         fdapde::ltype ltype = data_[layer_name].category()[0];
-        int ctype_ = 0;
+        int dtype_ = 0;
         if (ltype == ltype::areal) {
-            ctype_ = int(geo_cast<POLYGON>(data_[layer_name]).data().field_descriptor(col_name).type_id());
+            dtype_ = int(geo_cast<POLYGON>(data_[layer_name]).data().field_descriptor(col_name).type_id());
         }
         if (ltype == ltype::point) {
-            ctype_ = int(geo_cast<POINT  >(data_[layer_name]).data().field_descriptor(col_name).type_id());
+            dtype_ = int(geo_cast<POINT  >(data_[layer_name]).data().field_descriptor(col_name).type_id());
         }
-        return ctype_;
+        return dtype_;
     }
     std::vector<std::string> colnames_all() const { return data_.colnames(); }
     std::vector<std::string> colnames(const std::string& layer_name) {
@@ -168,26 +168,13 @@ template <typename Triangulation> class GeoFrame {
         return cols;
     }  
     // areal layer
-    // Eigen::Matrix<double, Dynamic, Dynamic>
-    // areal_sample(const std::string& layer_name, int n_samples, int seed = fdapde::random_seed) {
-    //     const internals::areal_layer<GeoFrame_>& layer = data_.get_as(layer_t::areal, layer_name);
-    //     return layer.sample(n_samples, seed);
-    // }
-    // std::vector<Eigen::Matrix<double, Dynamic, Dynamic>> areal_poly_nodes(const std::string& layer_name) {
-    //     const internals::areal_layer<GeoFrame_>& layer = data_.get_as(layer_t::areal, layer_name);
+    // std::vector<Eigen::Matrix<double, Dynamic, Dynamic>> areal_polygons(const std::string& layer_name) {
+    //     const auto& layer = geo_index_cast<0, POLYGON>(data_[layer_name]);
     //     int n_regions = layer.n_regions();
     //     std::vector<Eigen::Matrix<double, Dynamic, Dynamic>> nodes;
     //     nodes.resize(n_regions);
     //     for (int i = 0; i < n_regions; ++i) { nodes[i] = layer.geometry(i).nodes(); }
     //     return nodes;
-    // }
-    // std::vector<Eigen::Matrix<int, Dynamic, Dynamic>> areal_poly_edges(const std::string& layer_name) {
-    //     const internals::areal_layer<GeoFrame_>& layer = data_.get_as(layer_t::areal, layer_name);
-    //     int n_regions = layer.n_regions();
-    //     std::vector<Eigen::Matrix<int, Dynamic, Dynamic>> edges;
-    //     edges.resize(n_regions);
-    //     for (int i = 0; i < n_regions; ++i) { edges[i] = layer.geometry(i).boundary_edges().array() + 1; }
-    //     return edges;
     // }
 
     // point layer
@@ -195,12 +182,6 @@ template <typename Triangulation> class GeoFrame {
         // assert layer is pointwise
         return geo_index_cast<0, POINT>(data_[layer_name]).coordinates();
     }
-
-    // Eigen::Matrix<double, Dynamic, Dynamic> sample(const std::string& layer_name, int n_sample) {
-    //     const internals::areal_layer<GeoFrame_>& layer = data_.get_as(layer_t::areal, layer_name);
-    //     return layer.sample(n_sample);
-    // }
-
     geoframe_t& data() { return data_; }
    private:
     geoframe_t data_;

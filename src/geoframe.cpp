@@ -47,7 +47,7 @@ using matrix_t = Eigen::Matrix<double, Dynamic, Dynamic>;
       .method("flt64_blk_insert", &GeoFrame<Triangulation>::blk_insert<double>)                                        \
       .method("int64_blk_insert", &GeoFrame<Triangulation>::blk_insert<std::int64_t>)                                  \
       .method("ltype"           , &GeoFrame<Triangulation>::ltype)                                                     \
-      .method("ctype"           , &GeoFrame<Triangulation>::ctype)                                                     \
+      .method("dtype"           , &GeoFrame<Triangulation>::dtype)                                                     \
       .method("rows"            , &GeoFrame<Triangulation>::rows)                                                      \
       .method("cols"            , &GeoFrame<Triangulation>::cols)                                                      \
       .method("colnames"        , &GeoFrame<Triangulation>::colnames)                                                  \

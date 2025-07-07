@@ -14,9 +14,28 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-## type of supported layers
+## supported layer and data types
 layer_t <- list(point = 0, areal = 1)
-data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
+data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
+
+.gf_inject_r6_to_s3 <- function(s3obj, r6obj, blacklist = c("initialize", "clone")) {
+  methods <- names(r6obj)
+  for (m in methods) {
+    ## blacklisted methods or marked as gf__ are not exposed at S3 level (except gf__ptr__)
+    if (!m %in% blacklist && !m %in% names(s3obj) && (!grepl("gf__", m) || m == "gf__ptr__")) {
+      local({
+        method_name <- m
+        if (is.function(r6obj[[method_name]])) {
+          f <- function(...) {
+            do.call(r6obj[[method_name]], list(...))
+          }
+          s3obj[[method_name]] <<- f
+        }
+      })
+    }
+  }
+  return(s3obj)
+}
 
 #' An R6 class representing a geo referenced dataframe
 #'
@@ -50,7 +69,8 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     #'
     #' @param layer A string indicating the name of the data layer.
     #' @param type A string indicating the type of the layer. It can be either \code{"point"} or \code{"areal"}.
-    #' @param geo A character vector indicating the names of the columns in \code{data} to be used as coordinates. Default is \code{NULL}.
+    #' @param geo A character vector indicating the names of the columns in \code{data} to be used as coordinates.
+    #' Default is \code{NULL}.
     #' @param data A data frame containing the data. Default is \code{NULL}.
     insert = function(layer, type, geo = NULL, data = NULL) {
       env <- new.env()
@@ -66,7 +86,7 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
         if (is.character(a)) b$data_[["str_data"]][[colname]] = as.matrix(a)
       }
 
-      if(!is.null(data)) {
+      if (!is.null(data)) {
         if (is.matrix(data) || is.data.frame(data)) {
           n_col = dim(data)[2]
           for (i in seq(from = 1, to = n_col)) {
@@ -108,7 +128,7 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     #' @param layer A string indicating the name of the data layer.
     #' @param filename A string containing the path to the shapefile to be loaded.
     load_shp = function(layer, filename) {
-      if(!file.exists(filename)) stop(paste("File", filename, "not found", sep = " "))
+      if (!file.exists(filename)) stop(paste("File", filename, "not found", sep = " "))
       private$ptr_$load_shp(layer, filename)
       private$layer_map_[[layer]] <- "areal"
     },
@@ -177,35 +197,15 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     }
   ),
   active = list(
-      #' @field colnames
-      #' Returns the column names
-      colnames = function() { return(private$ptr_$colnames_all()) }
+    #' @field colnames
+    #' Returns the column names
+    colnames = function() return(private$ptr_$colnames_all()),
+    geometry = function() return(private$mesh_)
   )
 )
 
-inject_r6_to_s3 <- function(s3obj, r6obj, blacklist = c("initialize", "clone")) {
-  methods <- names(r6obj)
-  for (m in methods) {
-    ## blacklisted methods or marked as gf__ are not exposed at S3 level (except gf__ptr__)
-    if (!m %in% blacklist && !m %in% names(s3obj) && (!grepl("gf__", m) || m == "gf__ptr__")) {
-      local({
-        method_name <- m
-        if (is.function(r6obj[[method_name]])) {
-          f <- function(...) {
-            do.call(r6obj[[method_name]], list(...))
-          }
-          s3obj[[method_name]] <<- f
-        }
-      })
-    }
-  }
-  s3obj
-}
-
-# S3 constructor
-
 #' Create a Geoframe
-#' 
+#'
 #' @param domain An object of the triangulation class created by [triangulation()].
 #' @return An R6 object representing a geo-referenced data frame.
 #' @rdname geoframe
@@ -220,7 +220,7 @@ inject_r6_to_s3 <- function(s3obj, r6obj, blacklist = c("initialize", "clone")) 
 #' mesh <- triangulation(nodes = mesh_data$P, cells = mesh_data$T, boundary = mesh_data$PB)
 #' points <- mesh.sample(100)
 #' response <- rnorm(100)
-#' data <- data.frame(p1=points[,1], p2=points[,2], y=response) 
+#' data <- data.frame(p1=points[,1], p2=points[,2], y=response)
 #' gf <- geoframe(domain = florida)
 #' gf$insert(layer = "temp", type = "point", geo = c("p1", "p2"), data = data)
 #' gf
@@ -228,7 +228,7 @@ inject_r6_to_s3 <- function(s3obj, r6obj, blacklist = c("initialize", "clone")) 
 geoframe <- function(domain) {
   ptr <- .geoframe$new(domain)
   obj <- list(gf__ptr__ = ptr)
-  obj <- inject_r6_to_s3(obj, ptr)
+  obj <- .gf_inject_r6_to_s3(obj, ptr)
   class(obj) <- "gf"
   return(obj)
 }
@@ -239,21 +239,29 @@ print.gf <- function(x) {
 }
 
 #' @export
-`[[.gf` <- function(x, ...) {
-  x$gf__ptr__$gf__layer__(...)
+`[[.gf` <- function(x, layer_name) {
+  x$gf__ptr__$gf__layer__(layer_name)
 }
 
-## areal layer
-.areal_layer <- R6::R6Class(
-  "cpp_gf_areal",
+#' @export
+gf_geometry <- function(x) {
+  return(x$gf__ptr__$geometry)
+}
+
+## low-level data managment logic
+.data_layer <- R6::R6Class(
+  "cpp_gf_data",
   private = list(
-    ptr_  = NULL,
-    name_ = NULL
+    ptr_  = NULL, ## geoframe cpp backend
+    name_ = NULL,
+    type_ = NULL
   ),
   public = list(
-    initialize = function(geoframe, layer_name) {
-      private$ptr_ <- geoframe
-      private$name_ <- layer_name
+    initialize = function(ptr, name, type) {
+      private$ptr_ <- ptr
+      private$name_ <- name
+      fdapde_assert(type == "point" || type == "areal", "Invalid type.")
+      private$type_ <- type
     },
     ## subsetting operation
     gf__get__ = function(rows, cols) {
@@ -284,14 +292,14 @@ print.gf <- function(x) {
         rows,
         cols
       )
-      ptr$.__enclos_env__$private$layer_map_[[private$name_]] <- "areal"
+      ptr$.__enclos_env__$private$layer_map_[[private$name_]] <- private$type_
       obj <- list(gf__ptr__ = ptr)
-      obj <- inject_r6_to_s3(obj, ptr)
+      obj <- .gf_inject_r6_to_s3(obj, ptr)
       class(obj) <- "gf"
       return(obj)
     },
-    gf__set__ = function(rows, cols, value) {
-      ctype <- private$ptr_$ctype(private$name_, cols)
+    gf__set__ = function(rows, col, value) {
+      dtype <- private$ptr_$dtype(private$name_, col)
       ## prepare row subsetting vector
       if (missing(rows)) {
         rows <- as.vector(seq(from = 0, to = (private$ptr_$rows(private$name_) - 1)))
@@ -299,38 +307,26 @@ print.gf <- function(x) {
         rows <- as.vector(rows - 1) ## cpp aligned indexes
       }
       if (length(value) == 1) value <- as.vector(rep(value, times = length(rows)))
-      ## dispatch to typed assignment logic
-      if (ctype == data_t$flt64) private$ptr_$flt64_assign(private$name_, rows, cols, as.numeric(value))
-      if (ctype == data_t$flt32) private$ptr_$flt32_assign(private$name_, rows, cols, as.numeric(value))
-      if (ctype == data_t$int64) private$ptr_$int64_assign(private$name_, rows, cols, as.integer(value))
-      if (ctype == data_t$int32) private$ptr_$int32_assign(private$name_, rows, cols, as.integer(value))
-      if (ctype == data_t$bin)   private$ptr_$bin_assign  (private$name_, rows, cols, as.logical(value))
-      if (ctype == data_t$str)   private$ptr_$str_assign  (private$name_, rows, cols, as.character(value))
+      .gf_cpp_assign(self, rows, col, value)
     },
     gf__print__ = function(...) {
       output <- list()
       colnames <- private$ptr_$colnames(private$name_)
       rows <- seq(from = 0, to = min(5, private$ptr_$rows(private$name_) - 1))
       for (i in seq(from = 1, to = length(colnames))) {
+        v <- .gf_cpp_access(self, rows, colnames[i])
+
         output[[i]] <- rep("", times = 2 + length(rows))
         output[[i]][1] <- colnames[i]
-        dtype <- private$ptr_$ctype(private$name_, colnames[i])
+        dtype <- private$ptr_$dtype(private$name_, colnames[i])
         if (dtype == data_t$flt64) output[[i]][2] <- "<flt64>"
         if (dtype == data_t$flt32) output[[i]][2] <- "<flt32>"
         if (dtype == data_t$int64) output[[i]][2] <- "<int64>"
         if (dtype == data_t$int32) output[[i]][2] <- "<int32>"
-        if (dtype == data_t$bin)   output[[i]][2] <- "<bin>"
-        if (dtype == data_t$str)   output[[i]][2] <- "<chr>"
-
-        if (dtype == data_t$flt64) v <- private$ptr_$flt64_access(private$name_, rows, colnames[i])
-        if (dtype == data_t$flt32) v <- private$ptr_$flt32_access(private$name_, rows, colnames[i])
-        if (dtype == data_t$int64) v <- private$ptr_$int64_access(private$name_, rows, colnames[i])
-        if (dtype == data_t$int32) v <- private$ptr_$int32_access(private$name_, rows, colnames[i])
-        if (dtype == data_t$bin)   v <- private$ptr_$bin_access  (private$name_, rows, colnames[i])
-        if (dtype == data_t$str)   v <- private$ptr_$str_access  (private$name_, rows, colnames[i])
-
+        if (dtype == data_t$bin) output[[i]][2] <- "<bin>"
+        if (dtype == data_t$str) output[[i]][2] <- "<chr>"
         for (j in seq(from = 1, to = length(v))) {
-          output[[i]][j + 2] <- as.character(v[j])
+          output[[i]][j + 2] <- format(v[j], digits = 6) ## rounds to 6 decimal points
         }
       }
       ## pretty format
@@ -356,155 +352,131 @@ print.gf <- function(x) {
     }
   ),
   active = list(
-      name = function() { return(private$name_) },
-      rows = function() { return(private$ptr_$rows(private$name_)) },
-      colnames = function() { return(private$ptr_$colnames(private$name_)) }
+    name = function() return(private$name_),
+    rows = function() return(private$ptr_$rows(private$name_)),
+    cols = function() return(length(private$ptr_$colnames(private$name_))),
+    colnames = function() return(private$ptr_$colnames(private$name_))
   )
 )
 
+## low-level typed dispatch access logic
+.gf_cpp_access <- function(x, rows, col) {
+  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
+  cpp_backend <- get_private(r_backend)$ptr_
+  layer_name <- r_backend$name
+  dtype <- cpp_backend$dtype(layer_name, col)
+
+  v <- NULL
+  if (dtype == data_t$flt64) v <- cpp_backend$flt64_access(layer_name, rows, col)
+  if (dtype == data_t$flt32) v <- cpp_backend$flt32_access(layer_name, rows, col)
+  if (dtype == data_t$int64) v <- cpp_backend$int64_access(layer_name, rows, col)
+  if (dtype == data_t$int32) v <- cpp_backend$int32_access(layer_name, rows, col)
+  if (dtype == data_t$bin) v <- cpp_backend$bin_access(layer_name, rows, col)
+  if (dtype == data_t$str) v <- cpp_backend$str_access(layer_name, rows, col)
+  return(v)
+}
+
+## low-level typed dispatch assign logic
+.gf_cpp_assign <- function(x, rows, col, value) {
+  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
+  cpp_backend <- get_private(r_backend)$ptr_
+  layer_name <- r_backend$name
+  dtype <- cpp_backend$dtype(layer_name, col)
+
+  if (dtype == data_t$flt64) cpp_backend$flt64_assign(layer_name, rows, col, as.numeric(value))
+  if (dtype == data_t$flt32) cpp_backend$flt32_assign(layer_name, rows, col, as.numeric(value))
+  if (dtype == data_t$int64) cpp_backend$int64_assign(layer_name, rows, col, as.integer(value))
+  if (dtype == data_t$int32) cpp_backend$int32_assign(layer_name, rows, col, as.integer(value))
+  if (dtype == data_t$bin) cpp_backend$bin_assign(layer_name, rows, col, as.logical(value))
+  if (dtype == data_t$str) cpp_backend$str_assign(layer_name, rows, col, as.character(value))
+}
+
+## low-level typed dispatch insert logic
+.gf_cpp_insert <- function(x, col, value) {
+  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
+  cpp_backend <- get_private(r_backend)$ptr_
+  layer_name <- r_backend$name
+  nrows <- r_backend$rows
+  if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
+
+  if (is.numeric(value)) cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
+  if (is.integer(value)) cpp_backend$int64_insert(layer_name, name, as.integer(value))
+  if (is.character(value)) cpp_backend$str_insert(layer_name, name, as.character(value))
+}
+
+#' @export
+`$.gf_data` <- function(x, colname) {
+  ## access column data from backend
+  nrows <- x[["gf__ptr__"]]$rows
+  rows <- as.vector(seq(from = 0, to = (nrows - 1)))
+  .gf_cpp_access(x, rows, colname)
+}
+
+#' @export
+`$<-.gf_data` <- function(x, colname, value) {
+  cpp_backend <- get_private(x[["gf__ptr__"]])$ptr_
+  layer_name <- x[["gf__ptr__"]]$name
+  nrows <- x[["gf__ptr__"]]$rows
+
+  if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
+  if (colname %in% x[["gf__ptr__"]]$colnames) {
+    ## modify in place
+    rows <- as.vector(seq(from = 0, to = (nrows - 1)))
+    .gf_cpp_assign(x, rows, colname, value)
+  } else {
+    ## column insertion
+    fdapde_assert(length(value) == 1 || length(value) == nrows, "Invalid assignment.")
+    .gf_cpp_insert(x, colname, value)
+  }
+}
+
+
+## areal layer
+.areal_layer <- R6::R6Class(
+  inherit = .data_layer,
+  "cpp_gf_areal"
+)
+
 gf_areal <- function(geoframe, name) {
-  ptr <- .areal_layer$new(geoframe, name)
+  ptr <- .areal_layer$new(geoframe, name, "areal")
   obj <- list(gf__ptr__ = ptr)
-  obj <- inject_r6_to_s3(obj, ptr)
-  class(obj) <- "gf_areal"
+  obj <- .gf_inject_r6_to_s3(obj, ptr)
+  class(obj) <- c("gf_areal", "gf_data")
   return(obj)
 }
 
 ## S3 subsetting getter
 #' @export
 `[.gf_areal` <- function(x, rows, cols) {
-  x$gf__ptr__$gf__get__(rows, cols)
+  return(x[["gf__ptr__"]]$gf__get__(rows, cols))
 }
 
 ## S3 subsetting setter
 #' @export
 `[<-.gf_areal` <- function(x, rows, cols, value) {
-  x$gf__ptr__$gf__set__(rows, cols, value)
+  x[["gf__ptr__"]]$gf__set__(rows, cols, value)
 }
 
 #' @export
 print.gf_areal <- function(x) {
-  x$gf__ptr__$gf__print__()
+  x[["gf__ptr__"]]$gf__print__()
 }
 
 #' @export
-`$.gf_areal` <- function(x, name) {
-  if (name %in% names(x)) {
-    return(x[[name]])
-  } else {
-      ## access column data from the backend
-      cpp_backend <- get_private(x$gf__ptr__)$ptr_
-      layer_name  <- x$gf__ptr__$name
-      nrows       <- x$gf__ptr__$rows
-      
-      rows  <- as.vector(seq(from = 0, to = (nrows - 1)))
-      dtype <- cpp_backend$ctype(layer_name, name)
-
-      if (dtype == data_t$flt64) return(cpp_backend$flt64_access(layer_name, rows, name))
-      if (dtype == data_t$flt32) return(cpp_backend$flt32_access(layer_name, rows, name))
-      if (dtype == data_t$int64) return(cpp_backend$int64_access(layer_name, rows, name))
-      if (dtype == data_t$int32) return(cpp_backend$int32_access(layer_name, rows, name))
-      if (dtype == data_t$bin)   return(cpp_backend$bin_access  (layer_name, rows, name))
-      if (dtype == data_t$str)   return(cpp_backend$str_access  (layer_name, rows, name))
-  }
+names.gf_areal <- function(x, ...) {
+  return(x[["gf__ptr__"]]$colnames)
 }
 
 #' @export
-`$<-.gf_areal` <- function(x, name, value) {
-  if (name %in% names(x)) {
-    x[[name]] <- value
-  } else {
-      cpp_backend <- get_private(x$gf__ptr__)$ptr_
-      layer_name  <- x$gf__ptr__$name
-      nrows       <- x$gf__ptr__$rows
-      if(name %in% x$gf__ptr__$colnames) { ## modify in place
-      
-      rows  <- as.vector(seq(from = 0, to = (nrows - 1)))
-      dtype <- cpp_backend$ctype(layer_name, name)
-
-      if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-      ## dispatch to typed assignment logic
-      if (dtype == data_t$flt64) cpp_backend$flt64_assign(layer_name, rows, name, as.numeric(value))
-      if (dtype == data_t$flt32) cpp_backend$flt32_assign(layer_name, rows, name, as.numeric(value))
-      if (dtype == data_t$int64) cpp_backend$int64_assign(layer_name, rows, name, as.integer(value))
-      if (dtype == data_t$int32) cpp_backend$int32_assign(layer_name, rows, name, as.integer(value))
-      if (dtype == data_t$bin)   cpp_backend$bin_assign  (layer_name, rows, name, as.logical(value))
-      if (dtype == data_t$str)   cpp_backend$str_assign  (layer_name, rows, name, as.character(value))
-      } else { ## column insertion
-          fdapde_assert(length(value) == 1 || length(value) == nrows, "Invalid assignment.")
-
-          if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-          ## dispatch to typed insertion logic
-          if (is.numeric(value))   cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
-          if (is.integer(value))   cpp_backend$int64_insert(layer_name, name, as.integer(value))
-          if (is.character(value)) cpp_backend$str_insert  (layer_name, name, as.character(value))
-      }
-  }
+dim.gf_areal <- function(x, ...) {
+  return(c(x[["gf__ptr__"]]$rows, x[["gf__ptr__"]]$cols))
 }
+
 
 .point_layer <- R6::R6Class(
+  inherit = .data_layer,
   "cpp_gf_point",
-  private = list(
-    ptr_  = NULL,
-    name_ = NULL
-  ),
   public = list(
-    initialize = function(geoframe, layer_name) {
-      private$ptr_ <- geoframe
-      private$name_ <- layer_name
-    },
-    ## subsetting operation
-    gf__get__ = function(rows, cols) {
-      rows <- if (missing(rows)) {
-        as.vector(seq(from = 0, to = (private$ptr_$rows(private$name_) - 1)))
-      } else {
-        if (is.logical(rows)) {
-          as.vector(which(rows) - 1)
-        } else {
-          as.vector(rows - 1)
-        }
-      }
-      if (missing(cols)) {
-        cols <- private$ptr_$colnames(private$name_) ## take all columns
-      } else {
-        if (!is.character(cols)) {
-          cols <- private$ptr_$colnames(private$name_)[cols]
-        } else {
-          cols <- as.vector(cols)
-        }
-      }
-      ## create a new geoframe
-      ptr <- .geoframe$new()
-      ptr$.__enclos_env__$private$ptr_ <- new(
-        cpp_geoframe_2_2,
-        private$ptr_,
-        private$name_,
-        rows,
-        cols
-      )
-      ptr$.__enclos_env__$private$layer_map_[[private$name_]] <- "point"
-      obj <- list(gf__ptr__ = ptr)
-      obj <- inject_r6_to_s3(obj, ptr)
-      class(obj) <- "gf"
-      return(obj)
-    },
-    gf__set__ = function(rows, cols, value) {
-      ctype <- private$ptr_$ctype(private$name_, cols)
-      ## prepare row subsetting vector
-      if (missing(rows)) {
-        rows <- as.vector(seq(from = 0, to = (private$ptr_$rows(private$name_) - 1)))
-      } else {
-        rows <- as.vector(rows - 1) ## cpp aligned indexes
-      }
-      if (length(value) == 1) value <- as.vector(rep(value, times = length(rows)))
-      ## dispatch to typed assignment logic
-      if (ctype == data_t$flt64) private$ptr_$flt64_assign(private$name_, rows, cols, as.numeric(value))
-      if (ctype == data_t$flt32) private$ptr_$flt32_assign(private$name_, rows, cols, as.numeric(value))
-      if (ctype == data_t$int64) private$ptr_$int64_assign(private$name_, rows, cols, as.integer(value))
-      if (ctype == data_t$int32) private$ptr_$int32_assign(private$name_, rows, cols, as.integer(value))
-      if (ctype == data_t$bin)   private$ptr_$bin_assign  (private$name_, rows, cols, as.logical(value))
-      if (ctype == data_t$str)   private$ptr_$str_assign  (private$name_, rows, cols, as.character(value))
-    },
     gf__plot__ = function(covs = NULL, mesh = TRUE, ...) {
       coords = private$geoframe_handler()$point_coordinates(private$layer_name_)
       x_range <- range(coords[, 1])
@@ -523,76 +495,27 @@ print.gf_areal <- function(x) {
         ## create value-palette mapping
         points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = palette, pch = 21, cex = 1)
       }
-    },
-    gf__print__ = function(...) {
-      output <- list()
-      colnames <- private$ptr_$colnames(private$name_)
-      rows <- seq(from = 0, to = min(5, private$ptr_$rows(private$name_) - 1))
-      for (i in seq(from = 1, to = length(colnames))) {
-        output[[i]] <- rep("", times = 2 + length(rows))
-        output[[i]][1] <- colnames[i]
-        dtype <- private$ptr_$ctype(private$name_, colnames[i])
-        if (dtype == data_t$flt64) output[[i]][2] <- "<flt64>"
-        if (dtype == data_t$flt32) output[[i]][2] <- "<flt32>"
-        if (dtype == data_t$int64) output[[i]][2] <- "<int64>"
-        if (dtype == data_t$int32) output[[i]][2] <- "<int32>"
-        if (dtype == data_t$bin)   output[[i]][2] <- "<bin>"
-        if (dtype == data_t$str)   output[[i]][2] <- "<chr>"
-
-        if (dtype == data_t$flt64) v <- private$ptr_$flt64_access(private$name_, rows, colnames[i])
-        if (dtype == data_t$flt32) v <- private$ptr_$flt32_access(private$name_, rows, colnames[i])
-        if (dtype == data_t$int64) v <- private$ptr_$int64_access(private$name_, rows, colnames[i])
-        if (dtype == data_t$int32) v <- private$ptr_$int32_access(private$name_, rows, colnames[i])
-        if (dtype == data_t$bin)   v <- private$ptr_$bin_access  (private$name_, rows, colnames[i])
-        if (dtype == data_t$str)   v <- private$ptr_$str_access  (private$name_, rows, colnames[i])
-
-        for (j in seq(from = 1, to = length(v))) {
-          output[[i]][j + 2] <- as.character(v[j])
-        }
-      }
-      ## pretty format
-      for (i in seq(from = 1, to = length(colnames))) {
-        max_length <- max(nchar(output[[i]])) ## maximum string length per column
-        output[[i]] <- format(output[[i]], width = (max_length + 1), justify = "left")
-      }
-      ## output to console
-      for (i in seq(from = 1, to = length(colnames))) {
-        cat(output[[i]][1])
-      }
-      cat("\n")
-      for (i in seq(from = 1, to = length(colnames))) {
-        cat(paste0("\033[0;", 31, "m", output[[i]][2], "\033[0m"))
-      }
-      cat("\n")
-      for (i in seq(from = 3, to = (2 + length(rows)))) {
-        for (j in seq(from = 1, to = length(colnames))) {
-          cat(format(output[[j]][i], digits = 6))
-        }
-        cat("\n")
-      }
     }
+
+    ## specialized print method
   ),
   active = list(
-      name = function() { return(private$name_) },
-      rows = function() { return(private$ptr_$rows(private$name_)) },
-      cols = function() { return(length(private$ptr_$colnames(private$name_))) },
-      colnames = function() { return(private$ptr_$colnames(private$name_)) },
-      coordinates = function() { return(private$ptr_$point_coordinates(private$name_)) }
+    coordinates = function() return(private$ptr_$point_coordinates(private$name_))
   )
 )
 
 gf_point <- function(geoframe, name) {
-  ptr <- .point_layer$new(geoframe, name)
+  ptr <- .point_layer$new(geoframe, name, "point")
   obj <- list(gf__ptr__ = ptr)
-  obj <- inject_r6_to_s3(obj, ptr)
-  class(obj) <- "gf_point"
+  obj <- .gf_inject_r6_to_s3(obj, ptr)
+  class(obj) <- c("gf_point", "gf_data")
   return(obj)
 }
 
 ## S3 subsetting getter
 #' @export
 `[.gf_point` <- function(x, rows, cols) {
-  x[["gf__ptr__"]]$gf__get__(rows, cols)
+  return(x[["gf__ptr__"]]$gf__get__(rows, cols))
 }
 
 ## S3 subsetting setter
@@ -607,95 +530,16 @@ print.gf_point <- function(x) {
 }
 
 #' @export
-`$.gf_point` <- function(x, name) {
-  if (name %in% names(x)) {
-    return(x[[name]])
-  } else {
-      ## access column data from the backend
-      cpp_backend <- get_private(x[["gf__ptr__"]])$ptr_
-      layer_name  <- x[["gf__ptr__"]]$name
-      nrows       <- x[["gf__ptr__"]]$rows
-      
-      rows  <- as.vector(seq(from = 0, to = (nrows - 1)))
-      dtype <- cpp_backend$ctype(layer_name, name)
-
-      if (dtype == data_t$flt64) return(cpp_backend$flt64_access(layer_name, rows, name))
-      if (dtype == data_t$flt32) return(cpp_backend$flt32_access(layer_name, rows, name))
-      if (dtype == data_t$int64) return(cpp_backend$int64_access(layer_name, rows, name))
-      if (dtype == data_t$int32) return(cpp_backend$int32_access(layer_name, rows, name))
-      if (dtype == data_t$bin)   return(cpp_backend$bin_access  (layer_name, rows, name))
-      if (dtype == data_t$str)   return(cpp_backend$str_access  (layer_name, rows, name))
-  }
-}
-
-#' @export
-`$<-.gf_point` <- function(x, name, value) {
-  if (name %in% names(x)) {
-    x[[name]] <- value
-  } else {
-      cpp_backend <- get_private(x[["gf__ptr__"]])$ptr_
-      layer_name  <- x[["gf__ptr__"]]$name
-      nrows       <- x[["gf__ptr__"]]$rows
-      if(name %in% x[["gf__ptr__"]]$colnames) { ## modify in place
-        rows  <- as.vector(seq(from = 0, to = (nrows - 1)))
-        dtype <- cpp_backend$ctype(layer_name, name)
-
-        if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-        ## dispatch to typed assignment logic
-        if (dtype == data_t$flt64) cpp_backend$flt64_assign(layer_name, rows, name, as.numeric(value))
-        if (dtype == data_t$flt32) cpp_backend$flt32_assign(layer_name, rows, name, as.numeric(value))
-        if (dtype == data_t$int64) cpp_backend$int64_assign(layer_name, rows, name, as.integer(value))
-        if (dtype == data_t$int32) cpp_backend$int32_assign(layer_name, rows, name, as.integer(value))
-        if (dtype == data_t$bin)   cpp_backend$bin_assign  (layer_name, rows, name, as.logical(value))
-        if (dtype == data_t$str)   cpp_backend$str_assign  (layer_name, rows, name, as.character(value))
-      } else { ## column insertion
-          if(is.matrix(value)) {
-            fdapde_assert(nrow(value) == nrows, "Invalid assignment.")
-            cpp_backend$flt64_blk_insert(layer_name, name, as.matrix(value))
-          } else {
-            fdapde_assert(length(value) == 1 || length(value) == nrows, "Invalid assignment.")
-              
-            if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-            ## dispatch to typed insertion logic
-            if (is.numeric(value))   cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
-            if (is.integer(value))   cpp_backend$int64_insert(layer_name, name, as.integer(value))
-            if (is.character(value)) cpp_backend$str_insert  (layer_name, name, as.character(value))
-          }
-      }
-  }
-}
-
-#' @export
-dim.gf_point <- function(x, ...) {
+dim.gf_point <- function(x) {
   return(c(x[["gf__ptr__"]]$rows, x[["gf__ptr__"]]$cols))
 }
 
 #' @export
-names.gf_point <- function(x, ...) {
+names.gf_point <- function(x) {
   return(x[["gf__ptr__"]]$colnames)
 }
 
 #' @export
-gf_colnames <- function(x, ...) {
-  return(x[["gf__ptr__"]]$colnames)
-}
-
-#' @export
-dim.gf_point <- function(x, ...) {
-  return(c(x[["gf__ptr__"]]$rows, x[["gf__ptr__"]]$cols))
-}
-
-#' @export
-names.gf_areal <- function(x, ...) {
-  return(x[["gf__ptr__"]]$colnames)
-}
-
-#' @export
-gf_geometry <- function(x, ...) {
-  UseMethod("gf_geometry")
-}
-
-#' @export
-gf_geometry.gf_point <- function(x, ...) {
+gf_locations <- function(x) {
   return(x[["gf__ptr__"]]$coordinates)
 }
