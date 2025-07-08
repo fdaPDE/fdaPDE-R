@@ -168,14 +168,37 @@ template <typename Triangulation> class GeoFrame {
         return cols;
     }  
     // areal layer
-    // std::vector<Eigen::Matrix<double, Dynamic, Dynamic>> areal_polygons(const std::string& layer_name) {
-    //     const auto& layer = geo_index_cast<0, POLYGON>(data_[layer_name]);
-    //     int n_regions = layer.n_regions();
-    //     std::vector<Eigen::Matrix<double, Dynamic, Dynamic>> nodes;
-    //     nodes.resize(n_regions);
-    //     for (int i = 0; i < n_regions; ++i) { nodes[i] = layer.geometry(i).nodes(); }
-    //     return nodes;
-    // }
+    std::vector<Eigen::Matrix<int, Dynamic, Dynamic>> areal_polygons(const std::string& layer_name) {
+        const auto& layer = geo_index_cast<0, POLYGON>(data_[layer_name]);
+        const BinaryMatrix<Dynamic, Dynamic>& incidence_mtx = layer.incidence_matrix();
+        const auto& triangulation = data_.template triangulation<0>();
+
+	std::vector<Eigen::Matrix<int, Dynamic, Dynamic>> edges;	
+        for (int i = 0; i < incidence_mtx.rows(); ++i) {
+            std::unordered_set<int> edge_ids;
+	    
+            for (int j = 0; j < incidence_mtx.cols(); ++j) {
+                if (incidence_mtx(i, j)) {
+                    // loop over cell edges, take all edges which are not shared by any other cell
+                    auto cell = triangulation.cell(j);
+                    for (auto it = cell.edges_begin(); it != cell.edges_end(); ++it) {
+                        int edge_id = it->id();
+                        if (edge_ids.contains(edge_id)) {
+                            edge_ids.erase(edge_id);
+                        } else {
+                            edge_ids.insert(edge_id);
+                        }
+                    }
+                }
+            }
+
+            Eigen::Matrix<int, Dynamic, Dynamic> edges_(edge_ids.size(), 2);
+            int h = 0;
+            for (int j : edge_ids) { edges_.row(h++) = triangulation.edges().row(j); }
+	    edges.push_back(edges_);
+        }
+        return edges;
+    }
 
     // point layer
     Eigen::Matrix<double, Dynamic, Dynamic> point_coordinates(const std::string& layer_name) {

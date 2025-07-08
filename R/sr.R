@@ -34,7 +34,7 @@
     initialize = function(formula, data, penalty) {
       ## recover name of non-parametric field
       vars <- all.vars(as.formula(formula)[[3]])
-      f_symbol <- setdiff(vars, gf_colnames(data))
+      f_symbol <- setdiff(vars, names(data))
       fdapde_assert(length(f_symbol) == 1, "Expected exactly one nonparametric term.")
       private$f_ <- get(f_symbol, envir = globalenv())
       fe_type <- get_private(private$f_)$type
@@ -178,7 +178,7 @@ sr <- function(formula, data, penalty = NULL) {
     initialize = function(formula, data, family, penalty) {
       ## recover name of non-parametric field
       vars <- all.vars(as.formula(formula)[[3]])
-      f_symbol <- setdiff(vars, gf_colnames(data))
+      f_symbol <- setdiff(vars, names(data))
       fdapde_assert(length(f_symbol) == 1, "Expected exactly one nonparametric term.")
       private$f_ <- get(f_symbol, envir = globalenv())
       fe_type <- get_private(private$f_)$type
@@ -304,7 +304,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
     initialize = function(formula, data, level, penalty) {
       ## recover name of non-parametric field
       vars <- all.vars(as.formula(formula)[[3]])
-      f_symbol <- setdiff(vars, gf_colnames(data))
+      f_symbol <- setdiff(vars, names(data))
       fdapde_assert(length(f_symbol) == 1, "Expected exactly one nonparametric term.")
       private$f_ <- get(f_symbol, envir = globalenv())
       fe_type <- get_private(private$f_)$type

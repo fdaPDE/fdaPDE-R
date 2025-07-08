@@ -16,10 +16,10 @@
 
 ## supported layer and data types
 layer_t <- list(point = 0, areal = 1)
-data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
+data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
 
 .gf_inject_r6_to_s3 <- function(s3obj, r6obj, blacklist = c("initialize", "clone")) {
-  methods <- names(r6obj)
+  methods <- names(r6obj)  
   for (m in methods) {
     ## blacklisted methods or marked as gf__ are not exposed at S3 level (except gf__ptr__)
     if (!m %in% blacklist && !m %in% names(s3obj) && (!grepl("gf__", m) || m == "gf__ptr__")) {
@@ -245,7 +245,51 @@ print.gf <- function(x) {
 
 #' @export
 gf_geometry <- function(x) {
+  fdapde_assert("gf" %in% class(g), "Not a geoframe.")
   return(x$gf__ptr__$geometry)
+}
+
+## low-level typed dispatch logic
+.gf_cpp_access <- function(x, rows, col) {
+  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
+  cpp_backend <- get_private(r_backend)$ptr_
+  layer_name <- r_backend$name
+  dtype <- cpp_backend$dtype(layer_name, col)
+
+  v <- NULL
+  if (dtype == data_t$flt64) v <- cpp_backend$flt64_access(layer_name, rows, col)
+  if (dtype == data_t$flt32) v <- cpp_backend$flt32_access(layer_name, rows, col)
+  if (dtype == data_t$int64) v <- cpp_backend$int64_access(layer_name, rows, col)
+  if (dtype == data_t$int32) v <- cpp_backend$int32_access(layer_name, rows, col)
+  if (dtype == data_t$bin)   v <- cpp_backend$bin_access(layer_name, rows, col)
+  if (dtype == data_t$str)   v <- cpp_backend$str_access(layer_name, rows, col)
+  return(v)
+}
+
+.gf_cpp_assign <- function(x, rows, col, value) {
+  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
+  cpp_backend <- get_private(r_backend)$ptr_
+  layer_name <- r_backend$name
+  dtype <- cpp_backend$dtype(layer_name, col)
+
+  if (dtype == data_t$flt64) cpp_backend$flt64_assign(layer_name, rows, col, as.numeric(value))
+  if (dtype == data_t$flt32) cpp_backend$flt32_assign(layer_name, rows, col, as.numeric(value))
+  if (dtype == data_t$int64) cpp_backend$int64_assign(layer_name, rows, col, as.integer(value))
+  if (dtype == data_t$int32) cpp_backend$int32_assign(layer_name, rows, col, as.integer(value))
+  if (dtype == data_t$bin)   cpp_backend$bin_assign  (layer_name, rows, col, as.logical(value))
+  if (dtype == data_t$str)   cpp_backend$str_assign  (layer_name, rows, col, as.character(value))
+}
+
+.gf_cpp_insert <- function(x, col, value) {
+  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
+  cpp_backend <- get_private(r_backend)$ptr_
+  layer_name <- r_backend$name
+  nrows <- r_backend$rows
+  if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
+
+  if (is.numeric(value))   cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
+  if (is.integer(value))   cpp_backend$int64_insert(layer_name, name, as.integer(value))
+  if (is.character(value)) cpp_backend$str_insert  (layer_name, name, as.character(value))
 }
 
 ## low-level data managment logic
@@ -323,8 +367,8 @@ gf_geometry <- function(x) {
         if (dtype == data_t$flt32) output[[i]][2] <- "<flt32>"
         if (dtype == data_t$int64) output[[i]][2] <- "<int64>"
         if (dtype == data_t$int32) output[[i]][2] <- "<int32>"
-        if (dtype == data_t$bin) output[[i]][2] <- "<bin>"
-        if (dtype == data_t$str) output[[i]][2] <- "<chr>"
+        if (dtype == data_t$bin)   output[[i]][2] <- "<bin>"
+        if (dtype == data_t$str)   output[[i]][2] <- "<chr>"
         for (j in seq(from = 1, to = length(v))) {
           output[[i]][j + 2] <- format(v[j], digits = 6) ## rounds to 6 decimal points
         }
@@ -359,51 +403,6 @@ gf_geometry <- function(x) {
   )
 )
 
-## low-level typed dispatch access logic
-.gf_cpp_access <- function(x, rows, col) {
-  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
-  cpp_backend <- get_private(r_backend)$ptr_
-  layer_name <- r_backend$name
-  dtype <- cpp_backend$dtype(layer_name, col)
-
-  v <- NULL
-  if (dtype == data_t$flt64) v <- cpp_backend$flt64_access(layer_name, rows, col)
-  if (dtype == data_t$flt32) v <- cpp_backend$flt32_access(layer_name, rows, col)
-  if (dtype == data_t$int64) v <- cpp_backend$int64_access(layer_name, rows, col)
-  if (dtype == data_t$int32) v <- cpp_backend$int32_access(layer_name, rows, col)
-  if (dtype == data_t$bin) v <- cpp_backend$bin_access(layer_name, rows, col)
-  if (dtype == data_t$str) v <- cpp_backend$str_access(layer_name, rows, col)
-  return(v)
-}
-
-## low-level typed dispatch assign logic
-.gf_cpp_assign <- function(x, rows, col, value) {
-  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
-  cpp_backend <- get_private(r_backend)$ptr_
-  layer_name <- r_backend$name
-  dtype <- cpp_backend$dtype(layer_name, col)
-
-  if (dtype == data_t$flt64) cpp_backend$flt64_assign(layer_name, rows, col, as.numeric(value))
-  if (dtype == data_t$flt32) cpp_backend$flt32_assign(layer_name, rows, col, as.numeric(value))
-  if (dtype == data_t$int64) cpp_backend$int64_assign(layer_name, rows, col, as.integer(value))
-  if (dtype == data_t$int32) cpp_backend$int32_assign(layer_name, rows, col, as.integer(value))
-  if (dtype == data_t$bin) cpp_backend$bin_assign(layer_name, rows, col, as.logical(value))
-  if (dtype == data_t$str) cpp_backend$str_assign(layer_name, rows, col, as.character(value))
-}
-
-## low-level typed dispatch insert logic
-.gf_cpp_insert <- function(x, col, value) {
-  r_backend <- if ("gf__ptr__" %in% ls(x)) x[["gf__ptr__"]] else x
-  cpp_backend <- get_private(r_backend)$ptr_
-  layer_name <- r_backend$name
-  nrows <- r_backend$rows
-  if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-
-  if (is.numeric(value)) cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
-  if (is.integer(value)) cpp_backend$int64_insert(layer_name, name, as.integer(value))
-  if (is.character(value)) cpp_backend$str_insert(layer_name, name, as.character(value))
-}
-
 #' @export
 `$.gf_data` <- function(x, colname) {
   ## access column data from backend
@@ -434,7 +433,10 @@ gf_geometry <- function(x) {
 ## areal layer
 .areal_layer <- R6::R6Class(
   inherit = .data_layer,
-  "cpp_gf_areal"
+  "cpp_gf_areal",
+  active = list(
+    polygons = function() return(private$ptr_$areal_polygons(private$layer_name_))
+  )
 )
 
 gf_areal <- function(geoframe, name) {
@@ -445,13 +447,11 @@ gf_areal <- function(geoframe, name) {
   return(obj)
 }
 
-## S3 subsetting getter
 #' @export
 `[.gf_areal` <- function(x, rows, cols) {
   return(x[["gf__ptr__"]]$gf__get__(rows, cols))
 }
 
-## S3 subsetting setter
 #' @export
 `[<-.gf_areal` <- function(x, rows, cols, value) {
   x[["gf__ptr__"]]$gf__set__(rows, cols, value)
@@ -472,7 +472,13 @@ dim.gf_areal <- function(x, ...) {
   return(c(x[["gf__ptr__"]]$rows, x[["gf__ptr__"]]$cols))
 }
 
+#' @export
+gf_polygons <- function(x) {
+  fdapde_assert("gf_areal" %in% class(x), "Invalid layer type.")
+  return(x[["gf__ptr__"]]$polygons)
+}
 
+## point layer
 .point_layer <- R6::R6Class(
   inherit = .data_layer,
   "cpp_gf_point",
@@ -484,20 +490,16 @@ dim.gf_areal <- function(x, ...) {
 
       par(mar = c(1, 1, 1, 1))
       plot(private$geoframe_$.__enclos_env__$private$triangulation_)
+      col <- NULL
       if (is.null(covs)) {
-        points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = "red", pch = 21, cex = 1)
+        col <- "red"
       } else {
         n_col <- 50
         palette <- colorRampPalette(colors = c("lightyellow", "darkred"))(n_col)
-        ## if you have strings, use as many colors as different values of strings
-        ## if you have binary, use 2 colors
-        ## else, if numeric
-        ## create value-palette mapping
-        points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = palette, pch = 21, cex = 1)
+        col <- palette[as.numeric(cut(vals, breaks = 50))]
       }
+      points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = col, pch = 21, cex = 1)
     }
-
-    ## specialized print method
   ),
   active = list(
     coordinates = function() return(private$ptr_$point_coordinates(private$name_))
@@ -512,13 +514,11 @@ gf_point <- function(geoframe, name) {
   return(obj)
 }
 
-## S3 subsetting getter
 #' @export
 `[.gf_point` <- function(x, rows, cols) {
   return(x[["gf__ptr__"]]$gf__get__(rows, cols))
 }
 
-## S3 subsetting setter
 #' @export
 `[<-.gf_point` <- function(x, rows, cols, value) {
   x[["gf__ptr__"]]$gf__set__(rows, cols, value)
@@ -541,5 +541,6 @@ names.gf_point <- function(x) {
 
 #' @export
 gf_locations <- function(x) {
+  fdapde_assert("gf_point" %in% class(x), "Invalid layer type.")
   return(x[["gf__ptr__"]]$coordinates)
 }

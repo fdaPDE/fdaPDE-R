@@ -61,7 +61,8 @@ using matrix_t = Eigen::Matrix<double, Dynamic, Dynamic>;
       .method("point_coordinates"         , &GeoFrame<Triangulation>::point_coordinates)                               \
       /* areal layer */                                                                                                \
       .method("insert_scalar_areal_layer" , &GeoFrame<Triangulation>::insert_scalar_areal_layer)                       \
-      .method("load_shp"                  , &GeoFrame<Triangulation>::load_shp)
+      .method("load_shp"                  , &GeoFrame<Triangulation>::load_shp)                                        \
+      .method("areal_polygons"            , &GeoFrame<Triangulation>::areal_polygons)
 
 // colnames_all can be done directly from R
 	      
