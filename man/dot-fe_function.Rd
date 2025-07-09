@@ -27,7 +27,7 @@ The L2 squared norm of the function}
 The H1 squared norm of the function}
 
 \item{\code{coeff}}{(`numeric(n_dofs)`)\cr
-Gets or sets the vector of basis expansion coefficients.  
+Gets or sets the vector of basis expansion coefficients.
 If a value is provided, it assigns the given vector; otherwise, it returns the current coefficients.}
 }
 \if{html}{\out{</div>}}

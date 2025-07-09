@@ -51,6 +51,7 @@ using matrix_t = Eigen::Matrix<double, Dynamic, Dynamic>;
       .method("rows"            , &GeoFrame<Triangulation>::rows)                                                      \
       .method("cols"            , &GeoFrame<Triangulation>::cols)                                                      \
       .method("colnames"        , &GeoFrame<Triangulation>::colnames)                                                  \
+      .method("laynames"        , &GeoFrame<Triangulation>::laynames)                                                  \
       .method("colnames_all"    , &GeoFrame<Triangulation>::colnames_all)                                              \
       .method("bbox"            , &GeoFrame<Triangulation>::bbox)                                                      \
       .method("n_nodes"         , &GeoFrame<Triangulation>::n_nodes)                                                   \

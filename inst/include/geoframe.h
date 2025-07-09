@@ -153,6 +153,7 @@ template <typename Triangulation> class GeoFrame {
         if (ltype == ltype::point) { cols_ = geo_cast<POINT  >(data_[layer_name]).data().colnames(); }
 	return cols_;
     }
+    std::vector<std::string> laynames() const { return data_.laynames(); }
     int rows(const std::string& layer_name) {
         fdapde::ltype ltype = data_[layer_name].category()[0];
         int rows = 0;

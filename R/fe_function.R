@@ -20,6 +20,7 @@
   "fe_function",
   private = list(
     fe_function_ = NULL, ## cpp backend
+    mesh_ = NULL, ## geometry r6 handler
     type = character()
   ),
   public = list(
@@ -32,6 +33,7 @@
     #'
     #' @return A function object defined over the given domain.
     initialize = function(domain, type, coeff) {
+      private$mesh_ <- domain
       local_dim = domain$local_dim
       embed_dim = domain$embed_dim
       if (local_dim == 2 && embed_dim == 2) {
@@ -81,7 +83,7 @@
     #' The H1 squared norm of the function
     h1_squared_norm = function() private$fe_function_$h1_squared_norm(),
     #' @field coeff (`numeric(n_dofs)`)\cr
-    #' Gets or sets the vector of basis expansion coefficients.  
+    #' Gets or sets the vector of basis expansion coefficients.
     #' If a value is provided, it assigns the given vector; otherwise, it returns the current coefficients.
     coeff = function(c) {
       if (missing(c)) {
@@ -117,4 +119,34 @@ fe_function <- function(domain, type, coeff = NULL) {
     type = type,
     coeff = coeff
   ))
+}
+
+#' @export
+plot.fe_function <- function(x, palette = NULL, ...) {
+  n_col <- 100
+  if (is.null(palette)) {
+    palette_ <- colorRampPalette(colors = c("lightyellow", "darkred"))(n_col)
+  } else {
+    palette_ <- palette(n_col)
+  }
+
+  nodes <- get_private(x)$mesh_$nodes
+  x_grid <- seq(min(nodes[, 1]), max(nodes[, 1]), length.out = 250)
+  y_grid <- seq(min(nodes[, 2]), max(nodes[, 2]), length.out = 250)
+  xy_grid <- expand.grid(x_grid, y_grid)
+  ## evaluate fe_function at fine grid
+  vals <- x$eval(xy_grid)
+
+  col <- palette_[as.numeric(cut(vals, breaks = n_col))]
+  par(mar = c(1, 1, 1, 1))
+  plot(
+    xy_grid[, 1],
+    xy_grid[, 2],
+    xlab = "",
+    ylab = "",
+    pch = 15,
+    col = col,
+    asp = 1,
+    cex = .6
+  )
 }

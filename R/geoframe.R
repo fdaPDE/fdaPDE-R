@@ -16,10 +16,10 @@
 
 ## supported layer and data types
 layer_t <- list(point = 0, areal = 1)
-data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
+data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
 
 .gf_inject_r6_to_s3 <- function(s3obj, r6obj, blacklist = c("initialize", "clone")) {
-  methods <- names(r6obj)  
+  methods <- names(r6obj)
   for (m in methods) {
     ## blacklisted methods or marked as gf__ are not exposed at S3 level (except gf__ptr__)
     if (!m %in% blacklist && !m %in% names(s3obj) && (!grepl("gf__", m) || m == "gf__ptr__")) {
@@ -73,6 +73,7 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     #' Default is \code{NULL}.
     #' @param data A data frame containing the data. Default is \code{NULL}.
     insert = function(layer, type, geo = NULL, data = NULL) {
+      if (layer %in% private$ptr_$laynames()) stop(paste("Layer", layer, "already exists", sep = " "))
       env <- new.env()
       env$data_ <- list()
       env$data_[["int_data"]] = list()
@@ -81,8 +82,8 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
 
       load <- function(a, b, colname) {
         ## copies a inside b, depending on a's class
-        if (is.numeric(a))   b$data_[["dbl_data"]][[colname]] = as.matrix(a)
-        if (is.integer(a))   b$data_[["int_data"]][[colname]] = as.matrix(a)
+        if (is.numeric(a)) b$data_[["dbl_data"]][[colname]] = as.matrix(a)
+        if (is.integer(a)) b$data_[["int_data"]][[colname]] = as.matrix(a)
         if (is.character(a)) b$data_[["str_data"]][[colname]] = as.matrix(a)
       }
 
@@ -129,6 +130,7 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     #' @param filename A string containing the path to the shapefile to be loaded.
     load_shp = function(layer, filename) {
       if (!file.exists(filename)) stop(paste("File", filename, "not found", sep = " "))
+      if (layer %in% private$ptr_$laynames()) stop(paste("Layer", layer, "already exists", sep = " "))
       private$ptr_$load_shp(layer, filename)
       private$layer_map_[[layer]] <- "areal"
     },
@@ -192,14 +194,15 @@ data_t  <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     #' @return The requested data layer.
     gf__layer__ = function(layer_name) {
       if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
-      if (private$layer_map_[[layer_name]] == "areal") return(gf_areal(private$ptr_, layer_name))
-      if (private$layer_map_[[layer_name]] == "point") return(gf_point(private$ptr_, layer_name))
+      if (private$layer_map_[[layer_name]] == "areal") return(gf_areal(private$ptr_, private$mesh_, layer_name))
+      if (private$layer_map_[[layer_name]] == "point") return(gf_point(private$ptr_, private$mesh_, layer_name))
     }
   ),
   active = list(
     #' @field colnames
     #' Returns the column names
     colnames = function() return(private$ptr_$colnames_all()),
+    laynames = function() return(private$ptr_$laynames()),
     geometry = function() return(private$mesh_)
   )
 )
@@ -261,8 +264,8 @@ gf_geometry <- function(x) {
   if (dtype == data_t$flt32) v <- cpp_backend$flt32_access(layer_name, rows, col)
   if (dtype == data_t$int64) v <- cpp_backend$int64_access(layer_name, rows, col)
   if (dtype == data_t$int32) v <- cpp_backend$int32_access(layer_name, rows, col)
-  if (dtype == data_t$bin)   v <- cpp_backend$bin_access(layer_name, rows, col)
-  if (dtype == data_t$str)   v <- cpp_backend$str_access(layer_name, rows, col)
+  if (dtype == data_t$bin) v <- cpp_backend$bin_access(layer_name, rows, col)
+  if (dtype == data_t$str) v <- cpp_backend$str_access(layer_name, rows, col)
   return(v)
 }
 
@@ -276,8 +279,8 @@ gf_geometry <- function(x) {
   if (dtype == data_t$flt32) cpp_backend$flt32_assign(layer_name, rows, col, as.numeric(value))
   if (dtype == data_t$int64) cpp_backend$int64_assign(layer_name, rows, col, as.integer(value))
   if (dtype == data_t$int32) cpp_backend$int32_assign(layer_name, rows, col, as.integer(value))
-  if (dtype == data_t$bin)   cpp_backend$bin_assign  (layer_name, rows, col, as.logical(value))
-  if (dtype == data_t$str)   cpp_backend$str_assign  (layer_name, rows, col, as.character(value))
+  if (dtype == data_t$bin) cpp_backend$bin_assign(layer_name, rows, col, as.logical(value))
+  if (dtype == data_t$str) cpp_backend$str_assign(layer_name, rows, col, as.character(value))
 }
 
 .gf_cpp_insert <- function(x, col, value) {
@@ -287,22 +290,24 @@ gf_geometry <- function(x) {
   nrows <- r_backend$rows
   if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
 
-  if (is.numeric(value))   cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
-  if (is.integer(value))   cpp_backend$int64_insert(layer_name, name, as.integer(value))
-  if (is.character(value)) cpp_backend$str_insert  (layer_name, name, as.character(value))
+  if (is.numeric(value)) cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
+  if (is.integer(value)) cpp_backend$int64_insert(layer_name, name, as.integer(value))
+  if (is.character(value)) cpp_backend$str_insert(layer_name, name, as.character(value))
 }
 
 ## low-level data managment logic
 .data_layer <- R6::R6Class(
   "cpp_gf_data",
   private = list(
-    ptr_  = NULL, ## geoframe cpp backend
+    ptr_ = NULL, ## geoframe cpp backend
+    mesh_ = NULL, ## geometry R6 wrapper
     name_ = NULL,
     type_ = NULL
   ),
   public = list(
-    initialize = function(ptr, name, type) {
+    initialize = function(ptr, mesh, name, type) {
       private$ptr_ <- ptr
+      private$mesh_ <- mesh
       private$name_ <- name
       fdapde_assert(type == "point" || type == "areal", "Invalid type.")
       private$type_ <- type
@@ -367,8 +372,8 @@ gf_geometry <- function(x) {
         if (dtype == data_t$flt32) output[[i]][2] <- "<flt32>"
         if (dtype == data_t$int64) output[[i]][2] <- "<int64>"
         if (dtype == data_t$int32) output[[i]][2] <- "<int32>"
-        if (dtype == data_t$bin)   output[[i]][2] <- "<bin>"
-        if (dtype == data_t$str)   output[[i]][2] <- "<chr>"
+        if (dtype == data_t$bin) output[[i]][2] <- "<bin>"
+        if (dtype == data_t$str) output[[i]][2] <- "<chr>"
         for (j in seq(from = 1, to = length(v))) {
           output[[i]][j + 2] <- format(v[j], digits = 6) ## rounds to 6 decimal points
         }
@@ -429,24 +434,55 @@ gf_geometry <- function(x) {
   }
 }
 
-
 ## areal layer
 .areal_layer <- R6::R6Class(
   inherit = .data_layer,
   "cpp_gf_areal",
-  active = list(
-      polygons = function() {
-          polygons <- private$ptr_$areal_polygons(private$name_)
-          for (i in seq_len(length(polygons))) {
-            polygons[[i]]$edges <- r_aligned_index(polygons[[i]]$edges)
-          }
-          return(polygons)
+  public = list(
+    gf__plot__ = function(varname = NULL, mesh = TRUE, ...) {
+      polygons = private$ptr_$areal_polygons(private$name_)
+
+      par(mar = c(1, 1, 1, 1))
+      if (mesh == TRUE) {
+        plot(private$mesh_, asp = 1)
+      } else {
+        plot(private$mesh_$nodes, asp = 1, type = "n")
       }
+      col <- NULL
+      if (is.null(varname)) {
+        col <- "red"
+        for (i in seq_len(length(polygons))) {
+          edges <- polygons[[i]]$edges + 1
+          nodes <- polygons[[i]]$nodes
+          segments(
+            x0 = nodes[edges[, 1], 1],
+            y0 = nodes[edges[, 1], 2],
+            x1 = nodes[edges[, 2], 1],
+            y1 = nodes[edges[, 2], 2],
+            col = col,
+            lwd = 3
+          )
+        }
+      } else {
+        ## n_col <- 50
+        ## palette <- colorRampPalette(colors = c("lightyellow", "darkred"))(n_col)
+        ## col <- palette[as.numeric(cut(vals, breaks = 50))]
+      }
+    }
+  ),
+  active = list(
+    polygons = function() {
+      polygons <- private$ptr_$areal_polygons(private$name_)
+      for (i in seq_len(length(polygons))) {
+        polygons[[i]]$edges <- r_aligned_index(polygons[[i]]$edges)
+      }
+      return(polygons)
+    }
   )
 )
 
-gf_areal <- function(geoframe, name) {
-  ptr <- .areal_layer$new(geoframe, name, "areal")
+gf_areal <- function(geoframe, geometry, name) {
+  ptr <- .areal_layer$new(geoframe, geometry, name, "areal")
   obj <- list(gf__ptr__ = ptr)
   obj <- .gf_inject_r6_to_s3(obj, ptr)
   class(obj) <- c("gf_areal", "gf_data")
@@ -479,6 +515,11 @@ dim.gf_areal <- function(x, ...) {
 }
 
 #' @export
+plot.gf_areal <- function(x, ...) {
+  x[["gf__ptr__"]]$gf__plot__(...)
+}
+
+#' @export
 gf_polygons <- function(x) {
   fdapde_assert("gf_areal" %in% class(x), "Invalid layer type.")
   return(x[["gf__ptr__"]]$polygons)
@@ -489,22 +530,28 @@ gf_polygons <- function(x) {
   inherit = .data_layer,
   "cpp_gf_point",
   public = list(
-    gf__plot__ = function(covs = NULL, mesh = TRUE, ...) {
-      coords = private$geoframe_handler()$point_coordinates(private$name_)
+    gf__plot__ = function(varname = NULL, mesh = TRUE, ...) {
+      coords = private$ptr_$point_coordinates(private$name_)
       x_range <- range(coords[, 1])
       y_range <- range(coords[, 2])
-
-      par(mar = c(1, 1, 1, 1))
-      plot(private$geoframe_$.__enclos_env__$private$triangulation_)
+      par(mar = c(1, 1, if(is.null(varname)) 1 else 2, 1))
+      if (mesh == TRUE) {
+        plot(private$mesh_, asp = 1, main = if(is.null(varname)) "" else varname)
+      } else {
+        plot(private$mesh_$nodes, asp = 1, type = "n", main = if(is.null(varname)) "" else varname)
+      }
       col <- NULL
-      if (is.null(covs)) {
+      if (is.null(varname)) {
         col <- "red"
       } else {
-        n_col <- 50
+        n_col <- 100
         palette <- colorRampPalette(colors = c("lightyellow", "darkred"))(n_col)
-        col <- palette[as.numeric(cut(vals, breaks = 50))]
+        col <- palette[as.numeric(cut(
+          .gf_cpp_access(self, seq_len(cpp_aligned_index(self$rows)), varname),
+          breaks = 100
+        ))]
       }
-      points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = col, pch = 21, cex = 1)
+      points(coords, xlim = x_range, ylim = y_range, xlab = "", ylab = "", asp = 1, col = col, pch = 19, cex = 0.8)
     }
   ),
   active = list(
@@ -512,8 +559,8 @@ gf_polygons <- function(x) {
   )
 )
 
-gf_point <- function(geoframe, name) {
-  ptr <- .point_layer$new(geoframe, name, "point")
+gf_point <- function(geoframe, geometry, name) {
+  ptr <- .point_layer$new(geoframe, geometry, name, "point")
   obj <- list(gf__ptr__ = ptr)
   obj <- .gf_inject_r6_to_s3(obj, ptr)
   class(obj) <- c("gf_point", "gf_data")
@@ -543,6 +590,11 @@ dim.gf_point <- function(x) {
 #' @export
 names.gf_point <- function(x) {
   return(x[["gf__ptr__"]]$colnames)
+}
+
+#' @export
+plot.gf_point <- function(x, ...) {
+  x[["gf__ptr__"]]$gf__plot__(...)
 }
 
 #' @export
