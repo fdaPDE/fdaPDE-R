@@ -435,7 +435,13 @@ gf_geometry <- function(x) {
   inherit = .data_layer,
   "cpp_gf_areal",
   active = list(
-    polygons = function() return(private$ptr_$areal_polygons(private$layer_name_))
+      polygons = function() {
+          polygons <- private$ptr_$areal_polygons(private$name_)
+          for (i in seq_len(length(polygons))) {
+            polygons[[i]]$edges <- r_aligned_index(polygons[[i]]$edges)
+          }
+          return(polygons)
+      }
   )
 )
 
@@ -484,7 +490,7 @@ gf_polygons <- function(x) {
   "cpp_gf_point",
   public = list(
     gf__plot__ = function(covs = NULL, mesh = TRUE, ...) {
-      coords = private$geoframe_handler()$point_coordinates(private$layer_name_)
+      coords = private$geoframe_handler()$point_coordinates(private$name_)
       x_range <- range(coords[, 1])
       y_range <- range(coords[, 2])
 

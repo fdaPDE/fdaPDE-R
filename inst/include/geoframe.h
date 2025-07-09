@@ -168,15 +168,14 @@ template <typename Triangulation> class GeoFrame {
         return cols;
     }  
     // areal layer
-    std::vector<Eigen::Matrix<int, Dynamic, Dynamic>> areal_polygons(const std::string& layer_name) {
+    std::vector<Rcpp::List> areal_polygons(const std::string& layer_name) {
         const auto& layer = geo_index_cast<0, POLYGON>(data_[layer_name]);
         const BinaryMatrix<Dynamic, Dynamic>& incidence_mtx = layer.incidence_matrix();
         const auto& triangulation = data_.template triangulation<0>();
-
-	std::vector<Eigen::Matrix<int, Dynamic, Dynamic>> edges;	
+	
+	std::vector<Rcpp::List> polygons;
         for (int i = 0; i < incidence_mtx.rows(); ++i) {
             std::unordered_set<int> edge_ids;
-	    
             for (int j = 0; j < incidence_mtx.cols(); ++j) {
                 if (incidence_mtx(i, j)) {
                     // loop over cell edges, take all edges which are not shared by any other cell
@@ -192,12 +191,32 @@ template <typename Triangulation> class GeoFrame {
                 }
             }
 
-            Eigen::Matrix<int, Dynamic, Dynamic> edges_(edge_ids.size(), 2);
-            int h = 0;
-            for (int j : edge_ids) { edges_.row(h++) = triangulation.edges().row(j); }
-	    edges.push_back(edges_);
+	    // build polygon nodes - edges pair
+            Eigen::Matrix<int, Dynamic, Dynamic> edges(edge_ids.size(), 2);
+            std::vector<double> nodes_vec;
+            std::unordered_map<int, int> nodes_map;   // node renumbering map
+            int h = 0, k = 0;
+            for (int j : edge_ids) {
+                for (int n = 0; n < 2; n++) {
+                    int node = triangulation.edges()(j, n);
+                    if (nodes_map.find(node) == nodes_map.end()) {   // never found node
+                        nodes_vec.push_back(triangulation.nodes()(node, 0));
+                        nodes_vec.push_back(triangulation.nodes()(node, 1));
+                        nodes_map.insert({node, k});
+                        edges(h, n) = k;   // local node renumbering
+                        k++;
+                    } else {
+                        edges(h, n) = nodes_map.at(node);
+                    }
+                }
+                h++;
+            }
+            Eigen::Matrix<double, Dynamic, Dynamic> nodes =
+              Eigen::Map<Eigen::Matrix<double, Dynamic, Dynamic, Eigen::RowMajor>>(nodes_vec.data(), k, 2);
+            Rcpp::List polygon = Rcpp::List::create(Rcpp::Named("nodes") = nodes, Rcpp::Named("edges") = edges);
+            polygons.push_back(polygon);
         }
-        return edges;
+        return polygons;
     }
 
     // point layer
