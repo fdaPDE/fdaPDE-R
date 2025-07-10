@@ -143,7 +143,7 @@
 )
 
 #' Create an \code{sr} object
-#' 
+#'
 #' @param formula A formula object describing the relationship between the response variable and the model components (nonparametric or semiparametric).
 #' @param data A \code{geoframe} containing both the tessellation of the domain and the associated data (see also [geoframe()]).
 #' @param penalty A penalty term returned by [fe_elliptic()]. Default is \code{NULL}.
@@ -276,9 +276,9 @@ sr <- function(formula, data, penalty = NULL) {
 )
 
 #' Create a \code{gsr} object
-#' 
+#'
 #' @inheritParams sr
-#' @param family A string specifying the exponential family to be used. 
+#' @param family A string specifying the exponential family to be used.
 #'        Avaialble option are \code{"bernoulli"}, \code{"poisson"}, \code{"exponential"} or \code{"gamma"}.
 #' @references Wilhelm, M., and Sangalli, L.M. (2016), Generalized Spatial Regression with Differential Regularization,
 #'             Journal of Statistical Computation and Simulation, 86 (13), 2497-2518.
@@ -402,7 +402,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
 )
 
 #' Create a \code{qsr} object
-#' 
+#'
 #' @inheritParams sr
 #' @param level A numeric value denoting the quantile level to estimate.
 #' @references Castiglione, C., Arnone, E., Bernardi, M., Farcomeni, A., and Sangalli, L.M. (2025),
@@ -422,14 +422,14 @@ qsr <- function(formula, data, level, penalty = NULL) {
 
 #' Space-only Second-Order Penalty Term
 #'
-#' A list encapsulating the coefficients of a second-order linear differential operator 
+#' A list encapsulating the coefficients of a second-order linear differential operator
 #' typically used to define spatial smoothing penalties in regularization frameworks.
 #'
-#' @param K The diffusion tensor. A \code{local_dim} \eqn{\times} \code{local_dim} matrix encoding 
+#' @param K The diffusion tensor. A \code{local_dim} \eqn{\times} \code{local_dim} matrix encoding
 #' spatially varying diffusion. Can also be \code{NULL} to omit this term. Default is \code{NULL}.
-#' @param b The advection vector field. A \code{local_dim} \eqn{\times} 1 matrix representing 
+#' @param b The advection vector field. A \code{local_dim} \eqn{\times} 1 matrix representing
 #' first-order derivatives. Can also be \code{NULL}. Default is \code{NULL}.
-#' @param c The reaction term. A scalar \code{numeric} coefficient multiplying the zeroth-order 
+#' @param c The reaction term. A scalar \code{numeric} coefficient multiplying the zeroth-order
 #' component. Can also be \code{NULL}. Default is \code{NULL}.
 #' @param u The forcing term or known right-hand side function. Default is \code{NULL}. (... da completare ...)
 #' @export
@@ -440,17 +440,17 @@ fe_elliptic <- function(K = NULL, b = NULL, c = NULL, u = NULL) {
 
 #' Generalized Cross Validation (GCV) Calibrator
 #'
-#' A list encapsulating the Generalized Cross Validation (GCV) objective, which balances 
-#' goodness-of-fit and model complexity. This calibrator is typically used to select 
+#' A list encapsulating the Generalized Cross Validation (GCV) objective, which balances
+#' goodness-of-fit and model complexity. This calibrator is typically used to select
 #' smoothing parameters by minimizing the GCV score.
-#' 
-#' @param optimizer An optimizer object. The library currently provides the brute-force 
+#'
+#' @param optimizer An optimizer object. The library currently provides the brute-force
 #'        grid search optimizer \code{grid_optimizer}, which can be created using [grid_optimizer()].
 #' @param edf A string specifying the method to compute the equivalent degrees of freedom when minimizing the GCV.
 #'        Available option: \code{"stochastic"}. Default is \code{"stochastic"}.
-#' @param mc_samples An integer specifying the number of ... to use when 
+#' @param mc_samples An integer specifying the number of ... to use when
 #'        estimating the stochastic equivalent degrees of freedom. Default is \code{100}.
-#' @param seed An integer seed for the random number generator used in computing the 
+#' @param seed An integer seed for the random number generator used in computing the
 #'        \code{"stochastic"} EDF. Default is \code{NULL}, meaning ... (seed is set to 0???).
 #' @export
 gcv <- function(optimizer, edf = "stochastic", mc_samples = 100, seed = NULL) {
@@ -464,11 +464,41 @@ gcv <- function(optimizer, edf = "stochastic", mc_samples = 100, seed = NULL) {
 #' A Grid Search Optimizer
 #'
 #' An optimizer that performs a brute-force search over a predefined set of candidate values
-#' to minimize an objective function. This approach exhaustively evaluates the function at 
+#' to minimize an objective function. This approach exhaustively evaluates the function at
 #' each point in the grid and selects the value that yields the lowest objective.
 #'
 #' @param grid A numeric vector of values to be considered during the optimization.
 #' @export
-grid_optimizer <- function(grid) {
+grid_search <- function(grid) {
   return(list(opt_t = "grid", grid = grid))
+}
+
+#' @export
+newton_fd <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
+  return(list(
+    opt_t = "newton_fe",
+    max_iter = max_iter,
+    tolerance = tolerance,
+    step = step
+  ))
+}
+
+#' @export
+gradient_descent <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
+  return(list(
+    opt_t = "gradient_descent",
+    max_iter = max_iter,
+    tolerance = tolerance,
+    step = step
+  ))
+}
+
+#' @export
+bfgs <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
+  return(list(
+    opt_t = "bfgs",
+    max_iter = max_iter,
+    tolerance = tolerance,
+    step = step
+  ))
 }

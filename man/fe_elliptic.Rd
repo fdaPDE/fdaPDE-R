@@ -7,18 +7,18 @@
 fe_elliptic(K = NULL, b = NULL, c = NULL, u = NULL)
 }
 \arguments{
-\item{K}{The diffusion tensor. A \code{local_dim} \eqn{\times} \code{local_dim} matrix encoding 
+\item{K}{The diffusion tensor. A \code{local_dim} \eqn{\times} \code{local_dim} matrix encoding
 spatially varying diffusion. Can also be \code{NULL} to omit this term. Default is \code{NULL}.}
 
-\item{b}{The advection vector field. A \code{local_dim} \eqn{\times} 1 matrix representing 
+\item{b}{The advection vector field. A \code{local_dim} \eqn{\times} 1 matrix representing
 first-order derivatives. Can also be \code{NULL}. Default is \code{NULL}.}
 
-\item{c}{The reaction term. A scalar \code{numeric} coefficient multiplying the zeroth-order 
+\item{c}{The reaction term. A scalar \code{numeric} coefficient multiplying the zeroth-order
 component. Can also be \code{NULL}. Default is \code{NULL}.}
 
 \item{u}{The forcing term or known right-hand side function. Default is \code{NULL}. (... da completare ...)}
 }
 \description{
-A list encapsulating the coefficients of a second-order linear differential operator 
+A list encapsulating the coefficients of a second-order linear differential operator
 typically used to define spatial smoothing penalties in regularization frameworks.
 }

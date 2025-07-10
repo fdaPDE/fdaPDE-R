@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef __R_FE_LS_ELLIPTIC_H__
-#define __R_FE_LS_ELLIPTIC_H__
+#ifndef __R_FE_DE_H__
+#define __R_FE_DE_H__
 
 #include <RcppEigen.h>
 // [[Rcpp::depends(RcppEigen)]]
@@ -26,7 +26,7 @@
 namespace fdapde {
 namespace r {
 
-template <int LocalDim, int EmbedDim, typename Model> class fe_ls_elliptic {
+template <int LocalDim, int EmbedDim> class de_elliptic {
     static constexpr int local_dim = LocalDim;
     static constexpr int embed_dim = EmbedDim;
     using vector_t = Eigen::Matrix<double, Dynamic, 1>;
@@ -34,10 +34,11 @@ template <int LocalDim, int EmbedDim, typename Model> class fe_ls_elliptic {
 
     using Triangulation = fdapde::Triangulation<local_dim, embed_dim>;
     using GeoFrame = fdapde::GeoFrame<Triangulation>;
+    using Model = fdapde::DEPDE<internals::fe_de_elliptic>;
    public:
-    fe_ls_elliptic() noexcept = default;
-    fe_ls_elliptic(
-      const std::string& formula, const Rcpp::Environment& geoframe, const Rcpp::Nullable<Rcpp::List>& penalty) {
+    de_elliptic() noexcept = default;
+    de_elliptic(
+      const Rcpp::Environment& geoframe, const Rcpp::Nullable<Rcpp::List>& penalty) {
         const GeoFrame& gf = get_env_as<GeoFrame>(geoframe);
 	const Triangulation& D = get_env_as<GeoFrame>(geoframe).template triangulation<0>();
 	FeSpace Vh(D, P1<1>);
@@ -64,67 +65,26 @@ template <int LocalDim, int EmbedDim, typename Model> class fe_ls_elliptic {
 	    
             model_.discretize(std::pair {a, F});
         }
-        model_.analyze_data(formula, gf);
+	model_.analyze_data(gf);
     }
 
     // fitting
-    void fit(double lambda) { model_.fit(lambda); }
-    Rcpp::List fit_gcv(const std::string& opt_t, const Rcpp::List& params) {
-        int mc_samples = params["mc_samples"];
-        int seed = params["seed"];
-	auto gcv = model_.gcv(edf_cache_, mc_samples, seed);
-	double optimum;
-	std::vector<double> values;
-	std::vector<double> points;
-        if (opt_t == "grid") {
-            // unpack optimization parameters
-            std::vector<double> lambda_grid = params["grid"];
-	    points = lambda_grid;
-	    
-            GridOptimizer<1> optimizer;
-            optimizer.optimize(gcv, lambda_grid);
-	    optimum = optimizer.optimum()[0];
-	    values  = optimizer.values();
-        }
-        // if (opt_t == "newton_fe" || opt_t == "gradient_descent" || opt_t == "bfgs") {
-        //     // search in initial grid
-        //     std::vector<double> lambda_grid;
-        //     for (int i = -9; i < 3; ++i) lambda_grid.push_back(std::pow(10, i));
-        //     GridOptimizer<1> optimizer;
-        //     optimizer.optimize(gcv, lambda_grid);
-	//     Eigen::Matrix<double, 1, 1> init_lambda(optimizer.optimum()[0]);
+    void fit(double lambda, const vector_t& g_init, const std::string& opt_t, const Rcpp::List& params) {
+        // unpack optimization parameters
+        int max_iter = params["max_iter"];
+        double tol = params["tolerance"], step = params["step"];
 
-        //     // unpack optimization parameters
-        //     int max_iter = params["max_iter"];
-        //     double tol = params["tolerance"], step = params["step"];
-
-	//     if(opt_t == "newton_fe") {
-	//       Newton<1> optimizer(max_iter, tol, step);
-	//       optimizer.optimize(gcv, init_lambda);
-	//       optimum = optimizer.optimum()[0];
-	//     }
-	//     if (opt_t == "gradient_descent") {
-	//       GradientDescent<1> optimizer(max_iter, tol, step);
-	//       optimizer.optimize(gcv, init_lambda);
-	//       optimum = optimizer.optimum()[0];
-	//     }
-	//     if (opt_t == "bfgs") {
-	//       BFGS<1> optimizer(max_iter, tol, step);
-	//       optimizer.optimize(gcv, init_lambda);
-	//       optimum = optimizer.optimum()[0];
-	//     }
-        // }
-        edf_cache_.insert(gcv.edf_cache().begin(), gcv.edf_cache().end());
-        model_.fit(optimum);
-	
-        Rcpp::List result = Rcpp::List::create(
-          Rcpp::Named("optimum") = optimum, Rcpp::Named("values") = values, Rcpp::Named("points") = points);
-        return result;
+        if (opt_t == "newton_fe" || opt_t == "gradient_descent" || opt_t == "bfgs") {
+            if (opt_t == "newton_fe") { model_.fit(lambda, g_init, Newton<1> {max_iter, tol, step}); }
+            if (opt_t == "gradient_descent") { model_.fit(lambda, g_init, GradientDescent<1> {max_iter, tol, step}); }
+            if (opt_t == "bfgs") { model_.fit(lambda, g_init, BFGS<1> {max_iter, tol, step}); }
+        }	
+        return;
     }
     // observers
-    const vector_t& f() const { return model_.f(); }
-    const vector_t& beta() const { return model_.beta(); }
-    vector_t fitted() const { return model_.fitted(); }
+    const vector_t& density() const { return model_.density(); }
+    const vector_t& log_density() const { return model_.log_density(); }
+    vector_t fitted() const { return model_.fn(); }
   
    protected:
     Model model_;
@@ -135,4 +95,4 @@ template <int LocalDim, int EmbedDim, typename Model> class fe_ls_elliptic {
 }   // namespace r
 }   // namespace fdapde
 
-#endif   // __R_FE_LS_ELLIPTIC_H__
+#endif   // __R_FE_DE_H__

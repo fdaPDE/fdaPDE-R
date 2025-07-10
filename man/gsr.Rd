@@ -11,7 +11,7 @@ gsr(formula, data, family, penalty = NULL)
 
 \item{data}{A \code{geoframe} containing both the tessellation of the domain and the associated data (see also [geoframe()]).}
 
-\item{family}{A string specifying the exponential family to be used. 
+\item{family}{A string specifying the exponential family to be used.
 Avaialble option are \code{"bernoulli"}, \code{"poisson"}, \code{"exponential"} or \code{"gamma"}.}
 
 \item{penalty}{A penalty term returned by [fe_elliptic()]. Default is \code{NULL}.}

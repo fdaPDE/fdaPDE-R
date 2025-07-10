@@ -173,12 +173,12 @@ data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
             sep = ""
           )
           if (private$layer_map_[[i]] == "areal") {
-            layer <- gf_areal(private$ptr_, layer_names[i])
+            layer <- gf_areal(private$ptr_, private$mesh_, layer_names[i])
             cat("First ", min(6, private$ptr_$rows(layer_names[i])), " data rows:\n", sep = "")
             print(layer)
           }
           if (private$layer_map_[[i]] == "point") {
-            layer <- gf_point(private$ptr_, layer_names[i])
+            layer <- gf_point(private$ptr_, private$mesh_, layer_names[i])
             cat("First ", min(6, private$ptr_$rows(layer_names[i])), " data rows:\n", sep = "")
             print(layer)
           }
@@ -289,10 +289,22 @@ gf_geometry <- function(x) {
   layer_name <- r_backend$name
   nrows <- r_backend$rows
   if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-
-  if (is.numeric(value)) cpp_backend$flt64_insert(layer_name, name, as.numeric(value))
-  if (is.integer(value)) cpp_backend$int64_insert(layer_name, name, as.integer(value))
-  if (is.character(value)) cpp_backend$str_insert(layer_name, name, as.character(value))
+  
+  if (is.numeric(value)) {
+      if (is.matrix(value)) {
+        cpp_backend$flt64_blk_insert(layer_name, col, value)
+      } else {
+        cpp_backend$flt64_insert(layer_name, col, value)
+      }
+  }
+  if (is.integer(value)) {
+      if (is.matrix(value)) {
+        cpp_backend$int64_blk_insert(layer_name, col, value)
+      } else {
+        cpp_backend$int64_insert(layer_name, col, value)
+      }
+  }
+  if (is.character(value)) cpp_backend$str_insert(layer_name, col, value)
 }
 
 ## low-level data managment logic
@@ -429,7 +441,7 @@ gf_geometry <- function(x) {
     .gf_cpp_assign(x, rows, colname, value)
   } else {
     ## column insertion
-    fdapde_assert(length(value) == 1 || length(value) == nrows, "Invalid assignment.")
+    fdapde_assert(length(value) == 1 || (is.matrix(value) && dim(value)[1] == nrows), "Invalid assignment.")  
     .gf_cpp_insert(x, colname, value)
   }
 }

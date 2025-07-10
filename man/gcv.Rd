@@ -7,20 +7,20 @@
 gcv(optimizer, edf = "stochastic", mc_samples = 100, seed = NULL)
 }
 \arguments{
-\item{optimizer}{An optimizer object. The library currently provides the brute-force 
+\item{optimizer}{An optimizer object. The library currently provides the brute-force
 grid search optimizer \code{grid_optimizer}, which can be created using [grid_optimizer()].}
 
 \item{edf}{A string specifying the method to compute the equivalent degrees of freedom when minimizing the GCV.
 Available option: \code{"stochastic"}. Default is \code{"stochastic"}.}
 
-\item{mc_samples}{An integer specifying the number of ... to use when 
+\item{mc_samples}{An integer specifying the number of ... to use when
 estimating the stochastic equivalent degrees of freedom. Default is \code{100}.}
 
-\item{seed}{An integer seed for the random number generator used in computing the 
+\item{seed}{An integer seed for the random number generator used in computing the
 \code{"stochastic"} EDF. Default is \code{NULL}, meaning ... (seed is set to 0???).}
 }
 \description{
-A list encapsulating the Generalized Cross Validation (GCV) objective, which balances 
-goodness-of-fit and model complexity. This calibrator is typically used to select 
+A list encapsulating the Generalized Cross Validation (GCV) objective, which balances
+goodness-of-fit and model complexity. This calibrator is typically used to select
 smoothing parameters by minimizing the GCV score.
 }
