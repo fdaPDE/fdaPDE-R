@@ -91,7 +91,8 @@
       } else {
         private$fe_function_$set_coeff(as.matrix(c))
       }
-    }
+    },
+    geometry = function() private$mesh_
   )
 )
 
