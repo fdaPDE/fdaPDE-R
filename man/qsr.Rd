@@ -2,6 +2,7 @@
 % Please edit documentation in R/sr.R
 \name{qsr}
 \alias{qsr}
+\alias{.qsr}
 \title{Create a \code{qsr} object}
 \usage{
 qsr(formula, data, level, penalty = NULL)
@@ -9,7 +10,7 @@ qsr(formula, data, level, penalty = NULL)
 \arguments{
 \item{formula}{A formula object describing the relationship between the response variable and the model components (nonparametric or semiparametric).}
 
-\item{data}{A \code{geoframe} containing both the tessellation of the domain and the associated data (see also [geoframe()]).}
+\item{data}{A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).}
 
 \item{level}{A numeric value denoting the quantile level to estimate.}
 
@@ -17,8 +18,91 @@ qsr(formula, data, level, penalty = NULL)
 }
 \description{
 Create a \code{qsr} object
+
+An R6 class encapsulating the quantile spatial regression method with partial differential equation regularization.
+
+An R6 class encapsulating the quantile spatial regression method with partial differential equation regularization.
 }
 \references{
 Castiglione, C., Arnone, E., Bernardi, M., Farcomeni, A., and Sangalli, L.M. (2025),
             PDE-regularised spatial quantile regression, Journal of Multivariate Analysis, DOI: 10.1016/j.jmva.2024.105381.
+}
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{f}}{The estimated nonparametric component of the model.}
+
+\item{\code{beta}}{The estimated parametric component of the model.}
+
+\item{\code{fitted}}{The vector of values fitted by the model.}
+}
+\if{html}{\out{</div>}}
+}
+\section{Methods}{
+\subsection{Public methods}{
+\itemize{
+\item \href{#method-qsr-new}{\code{.qsr$new()}}
+\item \href{#method-qsr-fit}{\code{.qsr$fit()}}
+\item \href{#method-qsr-clone}{\code{.qsr$clone()}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-qsr-new"></a>}}
+\if{latex}{\out{\hypertarget{method-qsr-new}{}}}
+\subsection{Method \code{new()}}{
+Creates a new \code{sr} object.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{.qsr$new(formula, data, level, penalty)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{formula}}{R formula.}
+
+\item{\code{data}}{A \code{geoframe} containing the triangulation of the domain and the data (see also [geoframe()]).}
+
+\item{\code{level}}{A numeric value in (0, 1) specifying the quantile level to compute.}
+
+\item{\code{penalty}}{A penalty term returned by [fe_elliptic()].}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-qsr-fit"></a>}}
+\if{latex}{\out{\hypertarget{method-qsr-fit}{}}}
+\subsection{Method \code{fit()}}{
+Fits the statistical model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{.qsr$fit(lambda = NULL, calibrator = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{lambda}}{The smoothing parameter. Default is \code{NULL}.}
+
+\item{\code{calibrator}}{A calibrator object. Available calibrators include [gcv()].}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-qsr-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-qsr-clone}{}}}
+\subsection{Method \code{clone()}}{
+The objects of this class are cloneable with this method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{.qsr$clone(deep = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{deep}}{Whether to make a deep clone.}
+}
+\if{html}{\out{</div>}}
+}
+}
 }

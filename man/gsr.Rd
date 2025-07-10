@@ -2,6 +2,7 @@
 % Please edit documentation in R/sr.R
 \name{gsr}
 \alias{gsr}
+\alias{.gsr}
 \title{Create a \code{gsr} object}
 \usage{
 gsr(formula, data, family, penalty = NULL)
@@ -9,7 +10,7 @@ gsr(formula, data, family, penalty = NULL)
 \arguments{
 \item{formula}{A formula object describing the relationship between the response variable and the model components (nonparametric or semiparametric).}
 
-\item{data}{A \code{geoframe} containing both the tessellation of the domain and the associated data (see also [geoframe()]).}
+\item{data}{A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).}
 
 \item{family}{A string specifying the exponential family to be used.
 Avaialble option are \code{"bernoulli"}, \code{"poisson"}, \code{"exponential"} or \code{"gamma"}.}
@@ -18,8 +19,92 @@ Avaialble option are \code{"bernoulli"}, \code{"poisson"}, \code{"exponential"} 
 }
 \description{
 Create a \code{gsr} object
+
+An R6 class encapsulating the generalized spatial regression method with partial differential equation regularization.
+
+An R6 class encapsulating the generalized spatial regression method with partial differential equation regularization.
 }
 \references{
 Wilhelm, M., and Sangalli, L.M. (2016), Generalized Spatial Regression with Differential Regularization,
             Journal of Statistical Computation and Simulation, 86 (13), 2497-2518.
+}
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{f}}{The estimated nonparametric component of the model.}
+
+\item{\code{beta}}{The estimated parametric component of the model.}
+
+\item{\code{fitted}}{The vector of values fitted by the model.}
+}
+\if{html}{\out{</div>}}
+}
+\section{Methods}{
+\subsection{Public methods}{
+\itemize{
+\item \href{#method-gsr-new}{\code{.gsr$new()}}
+\item \href{#method-gsr-fit}{\code{.gsr$fit()}}
+\item \href{#method-gsr-clone}{\code{.gsr$clone()}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-gsr-new"></a>}}
+\if{latex}{\out{\hypertarget{method-gsr-new}{}}}
+\subsection{Method \code{new()}}{
+Creates a new \code{gsr} object.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{.gsr$new(formula, data, family, penalty)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{formula}}{R formula.}
+
+\item{\code{data}}{A \code{geoframe} containing the triangulation of the domain and the data (see also [geoframe()]).}
+
+\item{\code{family}}{A string specifying the exponential family to be used.
+Avaialble option are \code{"bernoulli"}, \code{"poisson"}, \code{"exponential"} or \code{"gamma"}.}
+
+\item{\code{penalty}}{A penalty term returned by [fe_elliptic()].}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-gsr-fit"></a>}}
+\if{latex}{\out{\hypertarget{method-gsr-fit}{}}}
+\subsection{Method \code{fit()}}{
+Fits the statistical model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{.gsr$fit(lambda = NULL, calibrator = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{lambda}}{The smoothing parameter. Default is \code{NULL}.}
+
+\item{\code{calibrator}}{A calibrator object. Available calibrators include [gcv()].}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-gsr-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-gsr-clone}{}}}
+\subsection{Method \code{clone()}}{
+The objects of this class are cloneable with this method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{.gsr$clone(deep = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{deep}}{Whether to make a deep clone.}
+}
+\if{html}{\out{</div>}}
+}
+}
 }

@@ -14,6 +14,10 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#' An R6 class encapsulating the smooth functional principal component analysis.
+#'
+#' @rdname fpca
+#' @order 2
 .fpca <- R6::R6Class(
   "fpca",
   private = list(
@@ -29,12 +33,23 @@
     }
   ),
   active = list(
+    #' @field loadings ...
     loadings = function() private$model_$loadings(),
+    #' @field scores ...
     scores = function() private$model_$scores(),
+    #'@field pcs ...
     pcs = function() private$model_$pcs()
   )
 )
 
+#' Create an \code{fpcs} object
+#'
+#' @param column ...
+#' @param data A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).
+#' @rdname fpca
+#' @order 1
+#' @references Lila, E., Aston, J.A.D.,  Sangalli, L.M., 2016a. Smooth Principal Component Analysis over two-dimensional
+#' manifolds with an application to neuroimaging. Ann. Appl. Stat., 10(4), pp. 1854-1879.
 #' @export
 fpca <- function(column, data) {
   return(.fpca$new(

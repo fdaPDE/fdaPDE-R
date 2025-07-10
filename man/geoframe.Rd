@@ -39,7 +39,11 @@ gf
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{colnames}}{Returns the column names}
+\item{\code{colnames}}{The column names.}
+
+\item{\code{laynames}}{The layers names contained in the geoframe.}
+
+\item{\code{geometry}}{A \code{triangulation} object that defines the domain over which the data are observed.}
 }
 \if{html}{\out{</div>}}
 }

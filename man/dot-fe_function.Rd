@@ -29,6 +29,8 @@ The H1 squared norm of the function}
 \item{\code{coeff}}{(`numeric(n_dofs)`)\cr
 Gets or sets the vector of basis expansion coefficients.
 If a value is provided, it assigns the given vector; otherwise, it returns the current coefficients.}
+
+\item{\code{geometry}}{A \code{triangulation} object that defines the domain over which the finite element function is defined.}
 }
 \if{html}{\out{</div>}}
 }
@@ -53,7 +55,7 @@ Creates a new function object defined over a spatial domain.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{domain}}{A tessellation of the spatial domain, created by [triangulation()].}
+\item{\code{domain}}{A triangulation of the spatial domain, created by [triangulation()].}
 
 \item{\code{type}}{A character string indicating the order of the finite element space.}
 

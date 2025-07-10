@@ -10,7 +10,7 @@ sr(formula, data, penalty = NULL)
 \arguments{
 \item{formula}{A formula object describing the relationship between the response variable and the model components (nonparametric or semiparametric).}
 
-\item{data}{A \code{geoframe} containing both the tessellation of the domain and the associated data (see also [geoframe()]).}
+\item{data}{A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).}
 
 \item{penalty}{A penalty term returned by [fe_elliptic()]. Default is \code{NULL}.}
 }
@@ -62,7 +62,7 @@ Creates a new \code{sr} object.
 \describe{
 \item{\code{formula}}{R formula.}
 
-\item{\code{data}}{A \code{geoframe} containing the tesseletion of the domain and the data (see also [geoframe()]).}
+\item{\code{data}}{A \code{geoframe} containing the triangulation of the domain and the data (see also [geoframe()]).}
 
 \item{\code{penalty}}{A penalty term returned by [fe_elliptic()].}
 }

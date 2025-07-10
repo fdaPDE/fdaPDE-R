@@ -29,7 +29,7 @@
     #' Creates a new \code{sr} object.
     #'
     #' @param formula R formula.
-    #' @param data A \code{geoframe} containing the tesseletion of the domain and the data (see also [geoframe()]).
+    #' @param data A \code{geoframe} containing the triangulation of the domain and the data (see also [geoframe()]).
     #' @param penalty A penalty term returned by [fe_elliptic()].
     initialize = function(formula, data, penalty) {
       ## recover name of non-parametric field
@@ -145,7 +145,7 @@
 #' Create an \code{sr} object
 #'
 #' @param formula A formula object describing the relationship between the response variable and the model components (nonparametric or semiparametric).
-#' @param data A \code{geoframe} containing both the tessellation of the domain and the associated data (see also [geoframe()]).
+#' @param data A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).
 #' @param penalty A penalty term returned by [fe_elliptic()]. Default is \code{NULL}.
 #' @rdname sr
 #' @order 1
@@ -165,9 +165,10 @@ sr <- function(formula, data, penalty = NULL) {
   ))
 }
 
-# An R6 class encapsulating the generalized spatial regression method with partial differential equation regularization.
-#
-# @rdname gsr
+#' An R6 class encapsulating the generalized spatial regression method with partial differential equation regularization.
+#'
+#' @rdname gsr
+#' @order 2
 .gsr <- R6::R6Class(
   "gsr",
   private = list(
@@ -175,6 +176,14 @@ sr <- function(formula, data, penalty = NULL) {
     f_ = "fe_function"
   ),
   public = list(
+    #' @description
+    #' Creates a new \code{gsr} object.
+    #'
+    #' @param formula R formula.
+    #' @param data A \code{geoframe} containing the triangulation of the domain and the data (see also [geoframe()]).
+    #' @param family A string specifying the exponential family to be used.
+    #'        Avaialble option are \code{"bernoulli"}, \code{"poisson"}, \code{"exponential"} or \code{"gamma"}.
+    #' @param penalty A penalty term returned by [fe_elliptic()].
     initialize = function(formula, data, family, penalty) {
       ## recover name of non-parametric field
       vars <- all.vars(as.formula(formula)[[3]])
@@ -256,6 +265,11 @@ sr <- function(formula, data, penalty = NULL) {
         private$model_ = new(cpp_gsr_2_2, formula, get_private(data$gf__ptr__)$ptr_, family, params)
       }
     },
+    #' @description
+    #' Fits the statistical model.
+    #'
+    #' @param lambda The smoothing parameter. Default is \code{NULL}.
+    #' @param calibrator A calibrator object. Available calibrators include [gcv()].
     fit = function(lambda = NULL, calibrator = NULL) {
       fdapde_assert(!is.null(calibrator) || !is.null(lambda), "Unable to select smoothing level.")
       if (is.null(calibrator)) {
@@ -269,8 +283,11 @@ sr <- function(formula, data, penalty = NULL) {
     }
   ),
   active = list(
+    #' @field f The estimated nonparametric component of the model.
     f = function() private$model_$f(),
+    #' @field beta The estimated parametric component of the model.
     beta = function() private$model_$beta(),
+    #' @field fitted The vector of values fitted by the model.
     fitted = function() private$model_$fitted()
   )
 )
@@ -294,6 +311,10 @@ gsr <- function(formula, data, family, penalty = NULL) {
   ))
 }
 
+#' An R6 class encapsulating the quantile spatial regression method with partial differential equation regularization.
+#'
+#' @rdname qsr
+#' @order 2
 .qsr <- R6::R6Class(
   "qsr",
   private = list(
@@ -301,6 +322,13 @@ gsr <- function(formula, data, family, penalty = NULL) {
     f_ = "fe_function"
   ),
   public = list(
+    #' @description
+    #' Creates a new \code{sr} object.
+    #'
+    #' @param formula R formula.
+    #' @param data A \code{geoframe} containing the triangulation of the domain and the data (see also [geoframe()]).
+    #' @param level A numeric value in (0, 1) specifying the quantile level to compute.
+    #' @param penalty A penalty term returned by [fe_elliptic()].
     initialize = function(formula, data, level, penalty) {
       ## recover name of non-parametric field
       vars <- all.vars(as.formula(formula)[[3]])
@@ -382,6 +410,11 @@ gsr <- function(formula, data, family, penalty = NULL) {
         private$model_ = new(cpp_qsr_2_2, formula, get_private(data$gf__ptr__)$ptr_, level, params)
       }
     },
+    #' @description
+    #' Fits the statistical model.
+    #'
+    #' @param lambda The smoothing parameter. Default is \code{NULL}.
+    #' @param calibrator A calibrator object. Available calibrators include [gcv()].
     fit = function(lambda = NULL, calibrator = NULL) {
       fdapde_assert(!is.null(calibrator) || !is.null(lambda), "Unable to select smoothing level.")
       if (is.null(calibrator)) {
@@ -395,8 +428,11 @@ gsr <- function(formula, data, family, penalty = NULL) {
     }
   ),
   active = list(
+    #' @field f The estimated nonparametric component of the model.
     f = function() private$model_$f(),
+    #' @field beta The estimated parametric component of the model.
     beta = function() private$model_$beta(),
+    #' @field fitted The vector of values fitted by the model.
     fitted = function() private$model_$fitted()
   )
 )
@@ -460,7 +496,6 @@ gcv <- function(optimizer, edf = "stochastic", mc_samples = 100, seed = NULL) {
   return(args)
 }
 
-
 #' A Grid Search Optimizer
 #'
 #' An optimizer that performs a brute-force search over a predefined set of candidate values
@@ -473,6 +508,15 @@ grid_search <- function(grid) {
   return(list(opt_t = "grid", grid = grid))
 }
 
+#' An Inexact Newton Optimizer
+#' 
+#' An optimizer that estimates the derivative of the objective function using finite differences. 
+#' The minimization is performed through an iterative scheme.
+#' 
+#' @param max_iter An integer specifying the maximum number of iterations. Default is \code{100}.
+#' @param tolerance A numeric value between 0 and 1 controlling the precision of the optimization: smaller values yield higher accuracy.
+#' @param step A numeric value specifying the step size used during each update.
+#' 
 #' @export
 newton_fd <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
   return(list(
@@ -483,6 +527,15 @@ newton_fd <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
   ))
 }
 
+#' A Gradient Descent Optimizer
+#' 
+#' An optimizer that minimizes an objective function using its gradient. 
+#' The minimization is performed through an iterative scheme.
+#' 
+#' @param max_iter An integer specifying the maximum number of iterations. Default is \code{100}.
+#' @param tolerance A numeric value between 0 and 1 controlling the precision of the optimization: smaller values yield higher accuracy.
+#' @param step A numeric value specifying the step size used during each update.
+#' 
 #' @export
 gradient_descent <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
   return(list(
@@ -493,6 +546,15 @@ gradient_descent <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
   ))
 }
 
+#' A BFGS Optimizer
+#' 
+#' An optimizer that minimizes an objective function using the Broyden–Fletcher–Goldfarb–Shanno (BFGS) quasi-Newton method. 
+#' The optimization is performed through an iterative scheme that updates an approximation of the inverse Hessian matrix.
+#' 
+#' @param max_iter An integer specifying the maximum number of iterations. Default is \code{100}.
+#' @param tolerance A numeric value between 0 and 1 controlling the precision of the optimization: smaller values yield higher accuracy.
+#' @param step A numeric value specifying the initial step size used during the updates.
+#' 
 #' @export
 bfgs <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
   return(list(

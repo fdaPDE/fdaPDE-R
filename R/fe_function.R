@@ -27,7 +27,7 @@
     #' @description
     #' Creates a new function object defined over a spatial domain.
     #'
-    #' @param domain A tessellation of the spatial domain, created by [triangulation()].
+    #' @param domain A triangulation of the spatial domain, created by [triangulation()].
     #' @param type A character string indicating the order of the finite element space.
     #' @param coeff A numeric vector of basis expansion coefficients.
     #'
@@ -92,6 +92,7 @@
         private$fe_function_$set_coeff(as.matrix(c))
       }
     },
+    #' @field geometry A \code{triangulation} object that defines the domain over which the finite element function is defined.
     geometry = function() private$mesh_
   )
 )
@@ -122,6 +123,12 @@ fe_function <- function(domain, type, coeff = NULL) {
   ))
 }
 
+#' Plot a finite element function
+#'
+#' Plots a \code{fe_function} object over its domain.
+#'
+#' @param x An object of class \code{fe_function}.
+#' @param palette A function that takes a single integer (e.g., the number of levels or bins) and returns a character vector specifying a color palette.
 #' @export
 plot.fe_function <- function(x, palette = NULL, ...) {
   n_col <- 100

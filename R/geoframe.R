@@ -199,10 +199,11 @@ data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     }
   ),
   active = list(
-    #' @field colnames
-    #' Returns the column names
+    #' @field colnames The column names.
     colnames = function() return(private$ptr_$colnames_all()),
+    #' @field laynames The layers names contained in the geoframe. 
     laynames = function() return(private$ptr_$laynames()),
+    #' @field geometry A \code{triangulation} object that defines the domain over which the data are observed.
     geometry = function() return(private$mesh_)
   )
 )
