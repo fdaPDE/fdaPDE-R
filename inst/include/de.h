@@ -42,6 +42,8 @@ template <int LocalDim, int EmbedDim> class de_elliptic {
         const GeoFrame& gf = get_env_as<GeoFrame>(geoframe);
 	const Triangulation& D = get_env_as<GeoFrame>(geoframe).template triangulation<0>();
 	FeSpace Vh(D, P1<1>);
+	n_dofs_ = Vh.n_dofs();
+	measure_ = D.measure();
 	
 	// discretize
 	TrialFunction f(Vh);
@@ -57,39 +59,45 @@ template <int LocalDim, int EmbedDim> class de_elliptic {
             FeCoeff<local_dim, 1, 1, vector_t> u(Rcpp::as<matrix_t>(ls["u"]));
             auto F = integral(D)(u * v);
 
-            model_.discretize(std::pair {a, F});
+            model_.discretize(gf, std::pair {a, F});
         } else {   // fallback to isotropic laplacian penalty
             auto a = integral(D)(dot(grad(f), grad(v)));
             ScalarField<local_dim, decltype([](const vector_t&) { return 0; })> u;
             auto F = integral(D)(u * v);
 	    
-            model_.discretize(std::pair {a, F});
+            model_.discretize(gf, std::pair {a, F});
         }
 	model_.analyze_data(gf);
     }
 
     // fitting
-    void fit(double lambda, const vector_t& g_init, const std::string& opt_t, const Rcpp::List& params) {
+    void fit(double lambda, const std::string& opt_t, const Rcpp::List& params) {
         // unpack optimization parameters
         int max_iter = params["max_iter"];
         double tol = params["tolerance"], step = params["step"];
 
-        if (opt_t == "newton_fe" || opt_t == "gradient_descent" || opt_t == "bfgs") {
-            if (opt_t == "newton_fe") { model_.fit(lambda, g_init, Newton<1> {max_iter, tol, step}); }
-            if (opt_t == "gradient_descent") { model_.fit(lambda, g_init, GradientDescent<1> {max_iter, tol, step}); }
-            if (opt_t == "bfgs") { model_.fit(lambda, g_init, BFGS<1> {max_iter, tol, step}); }
-        }	
+	vector_t g_init(n_dofs_);
+	for(int i = 0; i < n_dofs_; ++i) { g_init[i] = 1.0/measure_; }
+	
+        if (opt_t == "gradient_descent" || opt_t == "bfgs") {
+            if (opt_t == "gradient_descent") {
+                model_.fit(lambda, g_init, GradientDescent<Dynamic> {max_iter, tol, step});
+            }
+            if (opt_t == "bfgs") { model_.fit(lambda, g_init, BFGS<Dynamic> {max_iter, tol, step}); }
+        }
         return;
     }
     // observers
-    const vector_t& density() const { return model_.density(); }
-    const vector_t& log_density() const { return model_.log_density(); }
+    vector_t density() const { return model_.density(); }
+    vector_t log_density() const { return model_.log_density(); }
     vector_t fitted() const { return model_.fn(); }
-  
    protected:
     Model model_;
     using edf_cache_t = std::unordered_map<std::array<double, 1>, double, internals::std_array_hash<double, 1>>;
     edf_cache_t edf_cache_;
+
+    double measure_ = 0;   // domain measure, just to set initial density to 1/|D|
+    int n_dofs_;
 };
 
 }   // namespace r
