@@ -19,10 +19,6 @@ Avaialble option are \code{"bernoulli"}, \code{"poisson"}, \code{"exponential"} 
 }
 \description{
 Create a \code{gsr} object
-
-An R6 class encapsulating the generalized spatial regression method with partial differential equation regularization.
-
-An R6 class encapsulating the generalized spatial regression method with partial differential equation regularization.
 }
 \references{
 Wilhelm, M., and Sangalli, L.M. (2016), Generalized Spatial Regression with Differential Regularization,

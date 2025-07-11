@@ -14,10 +14,10 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#' An R6 class encapsulating the spatial regression method with partial differential equation regularization.
-#'
+# An R6 class encapsulating the spatial regression method with partial differential equation regularization.
+#
 #' @rdname sr
-#' @order 2
+# @order 2
 .sr <- R6::R6Class(
   "sr",
   private = list(
@@ -162,8 +162,8 @@ sr <- function(formula, data, penalty = NULL) {
   ))
 }
 
-#' An R6 class encapsulating the generalized spatial regression method with partial differential equation regularization.
-#'
+# An R6 class encapsulating the generalized spatial regression method with partial differential equation regularization.
+#
 #' @rdname gsr
 #' @order 2
 .gsr <- R6::R6Class(
@@ -308,8 +308,8 @@ gsr <- function(formula, data, family, penalty = NULL) {
   ))
 }
 
-#' An R6 class encapsulating the quantile spatial regression method with partial differential equation regularization.
-#'
+# An R6 class encapsulating the quantile spatial regression method with partial differential equation regularization.
+#
 #' @rdname qsr
 #' @order 2
 .qsr <- R6::R6Class(

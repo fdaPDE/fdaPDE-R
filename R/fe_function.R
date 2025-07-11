@@ -162,6 +162,10 @@ plot.plottable_function <- function(x, palette = NULL, ...) {
 }
 
 ## fe_function unary operation
+#' An R6 object that encapsulates the application of a unary operator to a 
+#' \code{fe_function} object.
+#' @rdname unary-op
+#' @order 1
 .fe_function_unary_op <- R6::R6Class(
  "fe_function_unary_op",
   private = list(
@@ -172,9 +176,8 @@ plot.plottable_function <- function(x, palette = NULL, ...) {
     #' @description
     #' Creates a new function object defined over a spatial domain.
     #'
-    #' @param domain A triangulation of the spatial domain, created by [triangulation()].
-    #' @param type A character string indicating the order of the finite element space.
-    #' @param coeff A numeric vector of basis expansion coefficients.
+    #' @param fe_function A \code{fe_function} object, created by [fe_function()].
+    #' @param unary_op An unary operator 
     #'
     #' @return A function object defined over the given domain.
     initialize = function(fe_function, unary_op) {
@@ -189,10 +192,13 @@ plot.plottable_function <- function(x, palette = NULL, ...) {
       return(private$unary_op_(private$fe_function_$eval(as.matrix(locations))))
     }
   ), active = list(
+    #' @field geometry A \code{triangulation} object that defines the domain over which the finite element function is defined.
     geometry = function() get_private(private$fe_function_)$mesh_
   )
 )
 
+#' @rdname unary-op
+#' @order 2
 #' @export
 exp.fe_function <- function(x) {
     r <- .fe_function_unary_op$new(x, exp)
@@ -200,6 +206,8 @@ exp.fe_function <- function(x) {
     return(r)
 }
 
+#' @rdname unary-op
+#' @order 3
 #' @export
 log.fe_function <- function(x) {
     r <- .fe_function_unary_op$new(x, log)
@@ -207,6 +215,8 @@ log.fe_function <- function(x) {
     return(r)
 }
 
+#' @rdname unary-op
+#' @order 4
 #' @export
 sin.fe_function <- function(x) {
     r <- .fe_function_unary_op$new(x, sin)
@@ -214,6 +224,8 @@ sin.fe_function <- function(x) {
     return(r)
 }
 
+#' @rdname unary-op
+#' @order 5
 #' @export
 cos.fe_function <- function(x) {
     r <- .fe_function_unary_op$new(x, cos)

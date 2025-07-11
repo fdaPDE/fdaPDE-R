@@ -16,10 +16,6 @@ sr(formula, data, penalty = NULL)
 }
 \description{
 Create an \code{sr} object
-
-An R6 class encapsulating the spatial regression method with partial differential equation regularization.
-
-An R6 class encapsulating the spatial regression method with partial differential equation regularization.
 }
 \references{
 \itemize{

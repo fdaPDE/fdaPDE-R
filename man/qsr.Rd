@@ -18,10 +18,6 @@ qsr(formula, data, level, penalty = NULL)
 }
 \description{
 Create a \code{qsr} object
-
-An R6 class encapsulating the quantile spatial regression method with partial differential equation regularization.
-
-An R6 class encapsulating the quantile spatial regression method with partial differential equation regularization.
 }
 \references{
 Castiglione, C., Arnone, E., Bernardi, M., Farcomeni, A., and Sangalli, L.M. (2025),
