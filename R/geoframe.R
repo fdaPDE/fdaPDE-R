@@ -198,7 +198,7 @@ data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
     #' @param layer_name A string specifying the name of the data layer to be returned.
     #' @return The requested data layer.
     gf__layer__ = function(layer_name) {
-      if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
+        if (!layer_name %in% names(private$layer_map_)) stop(paste("Layer ", layer_name, " not found.", sep = ""))
       if (private$layer_map_[[layer_name]] == "areal") return(gf_areal(private$ptr_, private$mesh_, layer_name))
       if (private$layer_map_[[layer_name]] == "point") return(gf_point(private$ptr_, private$mesh_, layer_name))
     }
@@ -249,7 +249,7 @@ print.gf <- function(x) {
 
 #' @export
 `[[.gf` <- function(x, layer_name) {
-  x$gf__ptr__$gf__layer__(layer_name)
+    x$gf__ptr__$gf__layer__(layer_name)
 }
 
 #' @export
@@ -507,7 +507,7 @@ gf_geometry <- function(x) {
       return(polygons)
     },
     incidence_matrix = function() {
-      return(private$ptr_$incidence_matrix())
+      return(private$ptr_$incidence_matrix(private$name_))
     }
   )
 )
