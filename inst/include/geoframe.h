@@ -219,6 +219,23 @@ template <typename Triangulation> class GeoFrame {
         }
         return polygons;
     }
+    Eigen::Matrix<int, Dynamic, Dynamic> incidence_matrix(const std::string& layer_name) const {
+        const auto& layer = geo_index_cast<0, POLYGON>(data_[layer_name]);
+
+        const BinaryMatrix<Dynamic, Dynamic>& incidence_matrix = layer.incidence_matrix();
+	int rows = incidence_matrix.rows();
+	int cols = incidence_matrix.cols();
+        Eigen::Matrix<int, Dynamic, Dynamic> mat(rows, cols);
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                if (incidence_matrix(i, j))
+                    mat(i, j) = 1;
+                else
+                    mat(i, j) = 0;
+            }
+        }
+        return mat;
+    }
 
     // point layer
     Eigen::Matrix<double, Dynamic, Dynamic> point_coordinates(const std::string& layer_name) {

@@ -163,24 +163,29 @@ data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
       if (n_layers > 0) {
         for (i in seq(from = 1, to = n_layers)) {
           cat("Layer: ", layer_names[i], "\n", sep = "")
-          cat("Type:  ", toupper(private$layer_map_[[i]]), "\n", sep = "")
-          cat(
-            "Dims: ",
-            private$ptr_$rows(layer_names[i]),
-            ", ",
-            private$ptr_$cols(layer_names[i]),
-            "\n",
-            sep = ""
-          )
-          if (private$layer_map_[[i]] == "areal") {
-            layer <- gf_areal(private$ptr_, private$mesh_, layer_names[i])
-            cat("First ", min(6, private$ptr_$rows(layer_names[i])), " data rows:\n", sep = "")
-            print(layer)
-          }
-          if (private$layer_map_[[i]] == "point") {
-            layer <- gf_point(private$ptr_, private$mesh_, layer_names[i])
-            cat("First ", min(6, private$ptr_$rows(layer_names[i])), " data rows:\n", sep = "")
-            print(layer)
+          if (private$ptr_$cols(layer_names[i]) == 0) {
+            cat("Type:  POINT PATTERN\n", sep = "")
+            cat("Dims: ", private$ptr_$rows(layer_names[i]), ", ", private$mesh_$embed_dim, "\n", sep = "")
+          } else {
+            cat("Type:  ", toupper(private$layer_map_[[i]]), "\n", sep = "")
+            cat(
+              "Dims: ",
+              private$ptr_$rows(layer_names[i]),
+              ", ",
+              private$ptr_$cols(layer_names[i]),
+              "\n",
+              sep = ""
+            )
+            if (private$layer_map_[[i]] == "areal") {
+              layer <- gf_areal(private$ptr_, private$mesh_, layer_names[i])
+              cat("First ", min(6, private$ptr_$rows(layer_names[i])), " data rows:\n", sep = "")
+              print(layer)
+            }
+            if (private$layer_map_[[i]] == "point") {
+              layer <- gf_point(private$ptr_, private$mesh_, layer_names[i])
+              cat("First ", min(6, private$ptr_$rows(layer_names[i])), " data rows:\n", sep = "")
+              print(layer)
+            }
           }
         }
       }
@@ -201,7 +206,7 @@ data_t <- list(flt64 = 0, flt32 = 1, int64 = 2, int32 = 3, bin = 4, str = 5)
   active = list(
     #' @field colnames The column names.
     colnames = function() return(private$ptr_$colnames_all()),
-    #' @field laynames The layers names contained in the geoframe. 
+    #' @field laynames The layers names contained in the geoframe.
     laynames = function() return(private$ptr_$laynames()),
     #' @field geometry A \code{triangulation} object that defines the domain over which the data are observed.
     geometry = function() return(private$mesh_)
@@ -295,20 +300,20 @@ gf_geometry <- function(x) {
   layer_name <- r_backend$name
   nrows <- r_backend$rows
   if (length(value) == 1) value <- as.vector(rep(value, times = nrows))
-  
+
   if (is.numeric(value)) {
-      if (is.matrix(value)) {
-        cpp_backend$flt64_blk_insert(layer_name, col, value)
-      } else {
-        cpp_backend$flt64_insert(layer_name, col, value)
-      }
+    if (is.matrix(value)) {
+      cpp_backend$flt64_blk_insert(layer_name, col, value)
+    } else {
+      cpp_backend$flt64_insert(layer_name, col, value)
+    }
   }
   if (is.integer(value)) {
-      if (is.matrix(value)) {
-        cpp_backend$int64_blk_insert(layer_name, col, value)
-      } else {
-        cpp_backend$int64_insert(layer_name, col, value)
-      }
+    if (is.matrix(value)) {
+      cpp_backend$int64_blk_insert(layer_name, col, value)
+    } else {
+      cpp_backend$int64_insert(layer_name, col, value)
+    }
   }
   if (is.character(value)) cpp_backend$str_insert(layer_name, col, value)
 }
@@ -447,7 +452,12 @@ gf_geometry <- function(x) {
     .gf_cpp_assign(x, rows, colname, value)
   } else {
     ## column insertion
-    fdapde_assert(length(value) == 1 || (is.vector(value) && length(value) == nrows) || (is.matrix(value) && dim(value)[1] == nrows), "Invalid assignment.")  
+    fdapde_assert(
+      length(value) == 1 ||
+        (is.vector(value) && length(value) == nrows) ||
+        (is.matrix(value) && dim(value)[1] == nrows),
+      "Invalid assignment."
+    )
     .gf_cpp_insert(x, colname, value)
   }
 }
@@ -495,6 +505,9 @@ gf_geometry <- function(x) {
         polygons[[i]]$edges <- r_aligned_index(polygons[[i]]$edges)
       }
       return(polygons)
+    },
+    incidence_matrix = function() {
+      return(private$ptr_$incidence_matrix())
     }
   )
 )
@@ -552,11 +565,11 @@ gf_polygons <- function(x) {
       coords = private$ptr_$point_coordinates(private$name_)
       x_range <- range(coords[, 1])
       y_range <- range(coords[, 2])
-      par(mar = c(1, 1, if(is.null(varname)) 1 else 2, 1))
+      par(mar = c(1, 1, if (is.null(varname)) 1 else 2, 1))
       if (mesh == TRUE) {
-        plot(private$mesh_, asp = 1, main = if(is.null(varname)) "" else varname)
+        plot(private$mesh_, asp = 1, main = if (is.null(varname)) "" else varname)
       } else {
-        plot(private$mesh_$nodes, asp = 1, type = "n", main = if(is.null(varname)) "" else varname)
+        plot(private$mesh_$nodes, asp = 1, type = "n", main = if (is.null(varname)) "" else varname)
       }
       col <- NULL
       if (is.null(varname)) {

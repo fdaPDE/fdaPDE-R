@@ -116,11 +116,13 @@ fe_function <- function(domain, type, coeff = NULL) {
   ## check domain is of type triangulation
 
   ## check type is supported
-  return(.fe_function$new(
+  r <- .fe_function$new(
     domain = domain,
     type = type,
     coeff = coeff
-  ))
+  )
+  class(r) <- c("plottable_function", class(r))
+  return(r)
 }
 
 #' Plot a finite element function
@@ -130,7 +132,7 @@ fe_function <- function(domain, type, coeff = NULL) {
 #' @param x An object of class \code{fe_function}.
 #' @param palette A function that takes a single integer (e.g., the number of levels or bins) and returns a character vector specifying a color palette.
 #' @export
-plot.fe_function <- function(x, palette = NULL, ...) {
+plot.plottable_function <- function(x, palette = NULL, ...) {
   n_col <- 100
   if (is.null(palette)) {
     palette_ <- colorRampPalette(colors = c("lightyellow", "darkred"))(n_col)
@@ -138,7 +140,7 @@ plot.fe_function <- function(x, palette = NULL, ...) {
     palette_ <- palette(n_col)
   }
 
-  nodes <- get_private(x)$mesh_$nodes
+  nodes <- x$geometry$nodes
   x_grid <- seq(min(nodes[, 1]), max(nodes[, 1]), length.out = 250)
   y_grid <- seq(min(nodes[, 2]), max(nodes[, 2]), length.out = 250)
   xy_grid <- expand.grid(x_grid, y_grid)
@@ -158,3 +160,64 @@ plot.fe_function <- function(x, palette = NULL, ...) {
     cex = .6
   )
 }
+
+## fe_function unary operation
+.fe_function_unary_op <- R6::R6Class(
+ "fe_function_unary_op",
+  private = list(
+    fe_function_ = NULL, ## r6 fe_function handler
+    unary_op_ = NULL ## functor to apply
+  ),
+  public = list(
+    #' @description
+    #' Creates a new function object defined over a spatial domain.
+    #'
+    #' @param domain A triangulation of the spatial domain, created by [triangulation()].
+    #' @param type A character string indicating the order of the finite element space.
+    #' @param coeff A numeric vector of basis expansion coefficients.
+    #'
+    #' @return A function object defined over the given domain.
+    initialize = function(fe_function, unary_op) {
+      private$fe_function_ <- fe_function
+      private$unary_op_ <- unary_op
+    },
+    #' @description
+    #' Evaluates the function over a set of points.
+    #'
+    #' @param locations A matrix containing the evaluatio points.
+    eval = function(locations) {
+      return(private$unary_op_(private$fe_function_$eval(as.matrix(locations))))
+    }
+  ), active = list(
+    geometry = function() get_private(private$fe_function_)$mesh_
+  )
+)
+
+#' @export
+exp.fe_function <- function(x) {
+    r <- .fe_function_unary_op$new(x, exp)
+    class(r) <- c("plottable_function", class(r))
+    return(r)
+}
+
+#' @export
+log.fe_function <- function(x) {
+    r <- .fe_function_unary_op$new(x, log)
+    class(r) <- c("plottable_function", class(r))
+    return(r)
+}
+
+#' @export
+sin.fe_function <- function(x) {
+    r <- .fe_function_unary_op$new(x, sin)
+    class(r) <- c("plottable_function", class(r))
+    return(r)
+}
+
+#' @export
+cos.fe_function <- function(x) {
+    r <- .fe_function_unary_op$new(x, cos)
+    class(r) <- c("plottable_function", class(r))
+    return(r)
+}
+

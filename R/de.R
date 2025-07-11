@@ -18,8 +18,8 @@
 #'
 #' @rdname de
 #' @order 2
-.de <- R6::R6Class(
-  "de",
+.ppe <- R6::R6Class(
+  "ppe",
   private = list(
     model_ = NULL
   ),
@@ -68,8 +68,8 @@
 #' }
 #' 
 #' @export
-de <- function(data, penalty = NULL) {
-  return(.de$new(
+ppe <- function(data, penalty = NULL) {
+  return(.ppe$new(
     data = data,
     penalty = penalty
   ))
