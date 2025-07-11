@@ -248,6 +248,11 @@ print.gf <- function(x) {
 }
 
 #' @export
+names.gf <- function(x) {
+  return(x$gf__ptr__$colnames)
+}
+
+#' @export
 gf_geometry <- function(x) {
   fdapde_assert("gf" %in% class(g), "Not a geoframe.")
   return(x$gf__ptr__$geometry)
@@ -442,7 +447,7 @@ gf_geometry <- function(x) {
     .gf_cpp_assign(x, rows, colname, value)
   } else {
     ## column insertion
-    fdapde_assert(length(value) == 1 || (is.matrix(value) && dim(value)[1] == nrows), "Invalid assignment.")  
+    fdapde_assert(length(value) == 1 || (is.vector(value) && length(value) == nrows) || (is.matrix(value) && dim(value)[1] == nrows), "Invalid assignment.")  
     .gf_cpp_insert(x, colname, value)
   }
 }
