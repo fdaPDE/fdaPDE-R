@@ -3,7 +3,7 @@
 \name{de}
 \alias{de}
 \alias{.de}
-\title{Create an \code{de} object}
+\title{Create a \code{de} object}
 \usage{
 de(data, penalty = NULL)
 }
@@ -14,7 +14,7 @@ de(data, penalty = NULL)
 the Laplacian operator in the penalty term (i.e., isotropic smoothing).}
 }
 \description{
-Create an \code{de} object
+Create a \code{de} object
 
 An R6 class encapsulating the nonparametric density estimation method with partial differential equation regularization.
 
@@ -33,7 +33,7 @@ An R6 class encapsulating the nonparametric density estimation method with parti
 \describe{
 \item{\code{density}}{The estimated density function.}
 
-\item{\code{density}}{The estimated log density function.}
+\item{\code{log_density}}{The estimated log density function.}
 
 \item{\code{fitted}}{A numeric vector containing the estimated density values at the data locations.}
 }
@@ -51,6 +51,7 @@ An R6 class encapsulating the nonparametric density estimation method with parti
 \if{html}{\out{<a id="method-de-new"></a>}}
 \if{latex}{\out{\hypertarget{method-de-new}{}}}
 \subsection{Method \code{new()}}{
+Creates a new \code{de} object.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{.de$new(data, penalty = NULL)}\if{html}{\out{</div>}}
 }

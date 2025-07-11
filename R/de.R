@@ -24,6 +24,9 @@
     model_ = NULL
   ),
   public = list(
+    #' @description
+    #' Creates a new \code{de} object.
+    #' 
     #' @param data A \code{geoframe} containing the triangulation of the domain and the data locations (see also [geoframe()]).
     #' @param penalty A penalty object returned by [fe_elliptic()]. Default is \code{NULL}, which corresponds to using
     #'        the Laplacian operator in the penalty term (i.e., isotropic smoothing).
@@ -42,14 +45,14 @@
   active = list(
     #' @field density The estimated density function.
     density = function() private$model_$density(),
-    #' @field density The estimated log density function.
+    #' @field log_density The estimated log density function.
     log_density = function() private$model_$log_density(),
     #' @field fitted A numeric vector containing the estimated density values at the data locations.
     fitted = function() private$model_$fitted()
   )
 )
 
-#' Create an \code{de} object
+#' Create a \code{de} object
 #'
 #' @param data A \code{geoframe} containing the triangulation of the domain and the data locations (see also [geoframe()]).
 #' @param penalty A penalty object returned by [fe_elliptic()]. Default is \code{NULL}, which corresponds to using

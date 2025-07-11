@@ -24,27 +24,37 @@
     model_ = NULL ## cpp backend
   ),
   public = list(
+    #' @description
+    #' Creates a new \code{fpca} object.
+    #' 
+    #' @param column A string specifying the name of the data field in the geoframe layer.
+    #' @param data A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).
     initialize = function(column, data) {
       private$model_ = new(cpp_fpca_laplace_2_2, column, get_private(data$gf__ptr__)$ptr_)
     },
+    #' @description
+    #' Fits the statistical model.
+    
+    #' @param npc integer denoting the number of principal components to be extracted.
+    #' @param calibrator A calibrator object. Available calibrators include [gcv()].
     fit = function(npc = NULL, calibrator = NULL) {
       fdapde_assert(!is.null(calibrator), "Unable to select smoothing level.")
       private$model_$fit(npc, calibrator)
     }
   ),
   active = list(
-    #' @field loadings ...
+    #' @field loadings A matrix containing the fPCs evaluated at the sampling locations.
     loadings = function() private$model_$loadings(),
-    #' @field scores ...
+    #' @field scores A matrix containing the scores for each fPC.
     scores = function() private$model_$scores(),
-    #'@field pcs ...
+    #'@field pcs A matrix containing the coefficients of the basis expansions of the fPCs.
     pcs = function() private$model_$pcs()
   )
 )
 
 #' Create an \code{fpcs} object
 #'
-#' @param column ...
+#' @param column A string specifying the name of the data field in the geoframe layer.
 #' @param data A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).
 #' @rdname fpca
 #' @order 1

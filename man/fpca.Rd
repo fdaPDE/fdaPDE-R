@@ -8,7 +8,7 @@
 fpca(column, data)
 }
 \arguments{
-\item{column}{...}
+\item{column}{A string specifying the name of the data field in the geoframe layer.}
 
 \item{data}{A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).}
 }
@@ -26,11 +26,11 @@ manifolds with an application to neuroimaging. Ann. Appl. Stat., 10(4), pp. 1854
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{loadings}}{...}
+\item{\code{loadings}}{A matrix containing the fPCs evaluated at the sampling locations.}
 
-\item{\code{scores}}{...}
+\item{\code{scores}}{A matrix containing the scores for each fPC.}
 
-\item{\code{pcs}}{...}
+\item{\code{pcs}}{A matrix containing the coefficients of the basis expansions of the fPCs.}
 }
 \if{html}{\out{</div>}}
 }
@@ -46,19 +46,39 @@ manifolds with an application to neuroimaging. Ann. Appl. Stat., 10(4), pp. 1854
 \if{html}{\out{<a id="method-fpca-new"></a>}}
 \if{latex}{\out{\hypertarget{method-fpca-new}{}}}
 \subsection{Method \code{new()}}{
+Creates a new \code{fpca} object.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{.fpca$new(column, data)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{column}}{A string specifying the name of the data field in the geoframe layer.}
+
+\item{\code{data}}{A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-fpca-fit"></a>}}
 \if{latex}{\out{\hypertarget{method-fpca-fit}{}}}
 \subsection{Method \code{fit()}}{
+Fits the statistical model.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{.fpca$fit(npc = NULL, calibrator = NULL)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{npc}}{integer denoting the number of principal components to be extracted.}
+
+\item{\code{calibrator}}{A calibrator object. Available calibrators include [gcv()].}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-fpca-clone"></a>}}
