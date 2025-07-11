@@ -12,7 +12,7 @@ qsr(formula, data, level, penalty = NULL)
 
 \item{data}{A \code{geoframe} containing both the triangulation of the domain and the associated data (see also [geoframe()]).}
 
-\item{level}{A numeric value denoting the quantile level to estimate.}
+\item{level}{A numeric value in (0,1) denoting the quantile level to estimate.}
 
 \item{penalty}{A penalty term returned by [fe_elliptic()]. Default is \code{NULL}.}
 }
@@ -62,7 +62,7 @@ Creates a new \code{sr} object.
 
 \item{\code{data}}{A \code{geoframe} containing the triangulation of the domain and the data (see also [geoframe()]).}
 
-\item{\code{level}}{A numeric value in (0, 1) specifying the quantile level to compute.}
+\item{\code{level}}{A numeric value in (0,1) denoting the quantile level to estimate.}
 
 \item{\code{penalty}}{A penalty term returned by [fe_elliptic()].}
 }

@@ -130,14 +130,11 @@
     }
   ),
   active = list(
-    #' @field f
-    #' The estimated nonparametric component of the model.
+    #' @field f The estimated nonparametric component of the model.
     f = function() private$model_$f(),
-    #' @field beta
-    #' The estimated parametric component of the model.
+    #' @field beta The estimated parametric component of the model.
     beta = function() private$model_$beta(),
-    #' @field fitted
-    #' The vector of values fitted by the model.
+    #' @field fitted The vector of values fitted by the model.
     fitted = function() private$model_$fitted()
   )
 )
@@ -327,7 +324,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
     #'
     #' @param formula R formula.
     #' @param data A \code{geoframe} containing the triangulation of the domain and the data (see also [geoframe()]).
-    #' @param level A numeric value in (0, 1) specifying the quantile level to compute.
+    #' @param level A numeric value in (0,1) denoting the quantile level to estimate.
     #' @param penalty A penalty term returned by [fe_elliptic()].
     initialize = function(formula, data, level, penalty) {
       ## recover name of non-parametric field
@@ -440,7 +437,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
 #' Create a \code{qsr} object
 #'
 #' @inheritParams sr
-#' @param level A numeric value denoting the quantile level to estimate.
+#' @param level A numeric value in (0,1) denoting the quantile level to estimate.
 #' @references Castiglione, C., Arnone, E., Bernardi, M., Farcomeni, A., and Sangalli, L.M. (2025),
 #'             PDE-regularised spatial quantile regression, Journal of Multivariate Analysis, DOI: 10.1016/j.jmva.2024.105381.
 #' @rdname qsr
