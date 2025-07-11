@@ -47,7 +47,7 @@
         params <- list()
         quad_nodes <- matrix()
         if (is.function(penalty$K) || is.function(penalty$b) || is.function(penalty$c) || is.function(penalty$u)) {
-          quad_nodes <- fe_simplex_quad_nodes(domain, fe_type)
+          quad_nodes <- get_private(domain)$mesh_$quadrature_nodes()
         }
         n_quad_nodes <- new(cpp_fe_space_2_2_p1, domain)$n_quad_nodes()
         embed_dim <- 2

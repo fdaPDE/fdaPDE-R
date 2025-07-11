@@ -43,7 +43,8 @@ namespace r {
       .method("cell_bbox"             , &TriangulationBase<LocalDim, EmbedDim>::cell_bbox             )                \
       .method("cell_barycenter"       , &TriangulationBase<LocalDim, EmbedDim>::cell_barycenter       )                \
       .method("cell_circumcenter"     , &TriangulationBase<LocalDim, EmbedDim>::cell_circumcenter     )                \
-      .method("cell_diameter"         , &TriangulationBase<LocalDim, EmbedDim>::cell_diameter         )
+      .method("cell_diameter"         , &TriangulationBase<LocalDim, EmbedDim>::cell_diameter         )                \
+      .method("quadrature_nodes"      , &TriangulationBase<LocalDim, EmbedDim>::quadrature_nodes      )
   
 using cpp_triangulation_2_2 = Triangulation<2, 2>;
 RCPP_MODULE(cpp_triangulation_2_2) {

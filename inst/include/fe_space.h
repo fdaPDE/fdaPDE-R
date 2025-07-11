@@ -51,6 +51,7 @@ template <int LocalDim, int EmbedDim, typename FeType> class FeSpace {
     int n_dofs() const { return fe_space_.n_dofs(); }
     int n_quad_nodes() const { return fe_space_.triangulation().n_cells() * n_quadrature_nodes; }
     matrix_t quad_nodes() { return simplex_quadrature_nodes(fe_space_.triangulation(), Quadrature {}); }
+    const FeSpaceType& fe_space() const { return fe_space_; }
    private:
     FeSpaceType fe_space_;
 };

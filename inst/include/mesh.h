@@ -20,7 +20,7 @@
 #include <RcppEigen.h>
 // [[Rcpp::depends(RcppEigen)]]
 
-#include <fdaPDE/geometry.h>
+#include <fdaPDE/finite_elements.h>
 
 namespace fdapde {
 namespace r {
@@ -93,6 +93,12 @@ template <int LocalDim, int EmbedDim> class TriangulationBase {
     node_t cell_circumcenter(int cell_id) const { return triangulation_.cell(cell_id).circumcenter(); }
     double cell_diameter(int cell_id) const { return triangulation_.cell(cell_id).diameter(); }
 
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> quadrature_nodes() {
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> quad_nodes =
+          simplex_quadrature_nodes(triangulation_, QS2DP2);
+        return quad_nodes;
+    }
+
     ~TriangulationBase() = default;
    protected:
     triangulation_t triangulation_;
@@ -117,7 +123,8 @@ template <int EmbedDim> class Triangulation<2, EmbedDim> : public TriangulationB
     }
     // observers
     const Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor>& neighbors() const {
-        return triangulation_.neighbors(); }
+        return triangulation_.neighbors();
+    }
     int_mtx edges() const { return triangulation_.edges(); }
     int n_edges() const { return triangulation_.n_edges(); }
     int n_boundary_edges() const { return triangulation_.n_boundary_edges(); }
