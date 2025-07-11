@@ -61,7 +61,7 @@
             fdapde_assert(nrow(K) == embed_dim && ncol(K) == embed_dim, "Not a square matrix.")
             params$K = matrix(rep(c(K), times = n_quad_nodes), nrow = n_quad_nodes, byrow = TRUE)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(
               nrow(K(q)) == embed_dim && ncol(K(q)) == embed_dim,
               "Not evaluates to a square matrix."
@@ -78,8 +78,8 @@
             fdapde_assert(nrow(b) == embed_dim && ncol(b) == 1, "Not a vector.")
             params$b = matrix(rep(c(b), times = n_quad_nodes), nrow = n_quad_nodes, byrow = TRUE)
           } else {
-            q <- quad_nodes[1, ]
-            fdapde_assert(nrow(b(q)) == embed_dim && ncol(b(q)) == 1, "Not evaluates to a vector.")
+            q <- t(as.matrix(quad_nodes[1, ]))
+            fdapde_assert(ncol(b(q)) == embed_dim, "Not evaluates to a vector.")
             params$b = b(quad_nodes)
           }
         }
@@ -91,7 +91,7 @@
           if (is.numeric(c)) {
             params$c = matrix(rep(c, times = n_quad_nodes), nrow = n_quad_nodes)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(is.numeric(c(q)), "Not evaluates to a scalar.")
             params$c = c(quad_nodes)
           }
@@ -104,7 +104,7 @@
           if (is.numeric(u)) {
             params$u = matrix(rep(u, times = n_quad_nodes), nrow = n_quad_nodes)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(is.numeric(u(q)), "Not evaluates to a scalar.")
             params$c = c(quad_nodes)
           }
@@ -197,7 +197,7 @@ sr <- function(formula, data, penalty = NULL) {
         params <- list()
         quad_nodes <- matrix()
         if (is.function(penalty$K) || is.function(penalty$b) || is.function(penalty$c) || is.function(penalty$u)) {
-          quad_nodes <- fe_simplex_quad_nodes(domain, fe_type)
+          quad_nodes <- domain$quadrature_nodes()
         }
         n_quad_nodes <- new(cpp_fe_space_2_2_p1, domain)$n_quad_nodes()
         embed_dim <- 2
@@ -211,7 +211,7 @@ sr <- function(formula, data, penalty = NULL) {
             fdapde_assert(nrow(K) == embed_dim && ncol(K) == embed_dim, "Not a square matrix.")
             params$K = matrix(rep(c(K), times = n_quad_nodes), nrow = n_quad_nodes, byrow = TRUE)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(
               nrow(K(q)) == embed_dim && ncol(K(q)) == embed_dim,
               "Not evaluates to a square matrix."
@@ -228,7 +228,7 @@ sr <- function(formula, data, penalty = NULL) {
             fdapde_assert(nrow(b) == embed_dim && ncol(b) == 1, "Not a vector.")
             params$b = matrix(rep(c(b), times = n_quad_nodes), nrow = n_quad_nodes, byrow = TRUE)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(nrow(b(q)) == embed_dim && ncol(b(q)) == 1, "Not evaluates to a vector.")
             params$b = b(quad_nodes)
           }
@@ -241,7 +241,7 @@ sr <- function(formula, data, penalty = NULL) {
           if (is.numeric(c)) {
             params$c = matrix(rep(c, times = n_quad_nodes), nrow = n_quad_nodes)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(is.numeric(c(q)), "Not evaluates to a scalar.")
             params$c = c(quad_nodes)
           }
@@ -254,7 +254,7 @@ sr <- function(formula, data, penalty = NULL) {
           if (is.numeric(u)) {
             params$u = matrix(rep(u, times = n_quad_nodes), nrow = n_quad_nodes)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(is.numeric(u(q)), "Not evaluates to a scalar.")
             params$c = c(quad_nodes)
           }
@@ -342,7 +342,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
         params <- list()
         quad_nodes <- matrix()
         if (is.function(penalty$K) || is.function(penalty$b) || is.function(penalty$c) || is.function(penalty$u)) {
-          quad_nodes <- fe_simplex_quad_nodes(domain, fe_type)
+          quad_nodes <- domain$quadrature_nodes()
         }
         n_quad_nodes <- new(cpp_fe_space_2_2_p1, domain)$n_quad_nodes()
         embed_dim <- 2
@@ -356,7 +356,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
             fdapde_assert(nrow(K) == embed_dim && ncol(K) == embed_dim, "Not a square matrix.")
             params$K = matrix(rep(c(K), times = n_quad_nodes), nrow = n_quad_nodes, byrow = TRUE)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(
               nrow(K(q)) == embed_dim && ncol(K(q)) == embed_dim,
               "Not evaluates to a square matrix."
@@ -373,7 +373,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
             fdapde_assert(nrow(b) == embed_dim && ncol(b) == 1, "Not a vector.")
             params$b = matrix(rep(c(b), times = n_quad_nodes), nrow = n_quad_nodes, byrow = TRUE)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(nrow(b(q)) == embed_dim && ncol(b(q)) == 1, "Not evaluates to a vector.")
             params$b = b(quad_nodes)
           }
@@ -386,7 +386,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
           if (is.numeric(c)) {
             params$c = matrix(rep(c, times = n_quad_nodes), nrow = n_quad_nodes)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(is.numeric(c(q)), "Not evaluates to a scalar.")
             params$c = c(quad_nodes)
           }
@@ -399,7 +399,7 @@ gsr <- function(formula, data, family, penalty = NULL) {
           if (is.numeric(u)) {
             params$u = matrix(rep(u, times = n_quad_nodes), nrow = n_quad_nodes)
           } else {
-            q <- quad_nodes[1, ]
+            q <- t(as.matrix(quad_nodes[1, ]))
             fdapde_assert(is.numeric(u(q)), "Not evaluates to a scalar.")
             params$c = c(quad_nodes)
           }
@@ -517,7 +517,7 @@ grid_search <- function(grid) {
 #' @export
 newton_fd <- function(max_iter = 100, tolerance = 0.01, step = 0.01) {
   return(list(
-    opt_t = "newton_fe",
+    opt_t = "newton_fd",
     max_iter = max_iter,
     tolerance = tolerance,
     step = step
